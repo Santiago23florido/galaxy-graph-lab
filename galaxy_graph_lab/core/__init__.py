@@ -11,12 +11,15 @@ from .geometry import (
     twin_cell,
     twin_map,
 )
+from .graph import GridEdge, GridGraph
 from .model_data import PuzzleData
 
 __all__ = [
     "BoardSpec",
     "Cell",
     "CenterSpec",
+    "GridEdge",
+    "GridGraph",
     "PuzzleData",
     "admissible_cells",
     "is_admissible_cell",
