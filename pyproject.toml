@@ -1,0 +1,32 @@
+[tool.poetry]
+name = "galaxy-graph-lab"
+version = "0.1.0"
+description = "Python-based Galaxy graph lab project."
+authors = ["Santiago Florido Gomez"]
+license = "MIT"
+readme = "README.md"
+packages = [{ include = "galaxy_graph_lab" }]
+
+[tool.poetry.dependencies]
+python = ">=3.11,<4.0"
+pygame = "^2.6.1"
+
+[tool.poetry.group.dev.dependencies]
+pytest = "^8.0.0"
+ruff = "^0.8.0"
+
+[tool.poetry.scripts]
+galaxy-graph-lab = "galaxy_graph_lab.main:main"
+
+[build-system]
+requires = ["poetry-core>=2.0.0,<3.0.0"]
+build-backend = "poetry.core.masonry.api"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-q"
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+extend-exclude = [".tmp", "pyproject.toml"]
