@@ -1,5 +1,3 @@
-"""Immutable precomputed data shared by later solver layers."""
-
 from __future__ import annotations
 
 from collections.abc import Mapping, Sequence
@@ -9,6 +7,7 @@ from types import MappingProxyType
 from .board import BoardSpec, Cell
 from .centers import CenterSpec
 from .geometry import admissible_cells, kernel_cells, twin_map
+from .graph import GridGraph
 
 
 def _freeze_mapping(
@@ -35,6 +34,8 @@ class PuzzleData:
     board: BoardSpec
     cells: tuple[Cell, ...]
     centers: tuple[CenterSpec, ...]
+    graph: GridGraph
+    neighbors: Mapping[Cell, tuple[Cell, ...]]
     center_by_id: Mapping[str, CenterSpec]
     admissible_cells_by_center: Mapping[str, tuple[Cell, ...]]
     kernel_by_center: Mapping[str, tuple[Cell, ...]]
@@ -46,7 +47,7 @@ class PuzzleData:
         board: BoardSpec,
         centers: Sequence[CenterSpec],
     ) -> "PuzzleData":
-        """Build the shared geometry data for Phase 1."""
+        """Build the shared precomputed puzzle data."""
 
         center_items = tuple(centers)
         if not center_items:
@@ -56,6 +57,7 @@ class PuzzleData:
         admissible_by_center: dict[str, tuple[Cell, ...]] = {}
         kernel_by_center_lookup: dict[str, tuple[Cell, ...]] = {}
         twin_by_center_lookup: dict[str, dict[Cell, Cell]] = {}
+        graph = GridGraph(board)
 
         for center in center_items:
             if center.id in center_by_id:
@@ -82,6 +84,8 @@ class PuzzleData:
             board=board,
             cells=board.cells(),
             centers=center_items,
+            graph=graph,
+            neighbors=graph.neighbor_map(),
             center_by_id=MappingProxyType(dict(center_by_id)),
             admissible_cells_by_center=_freeze_mapping(admissible_by_center),
             kernel_by_center=_freeze_mapping(kernel_by_center_lookup),
