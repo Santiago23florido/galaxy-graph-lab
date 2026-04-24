@@ -1,4 +1,4 @@
-"""Core exports for the solver-agnostic Galaxy layer."""
+"""Core exports for the Galaxy mathematical and solver layers."""
 
 from .board import BoardSpec, Cell
 from .centers import CenterSpec
@@ -12,6 +12,7 @@ from .geometry import (
     twin_map,
 )
 from .graph import GridEdge, GridGraph
+from .milp import BaseMilpModel, BaseMilpSolveResult, GalaxyAssignment, solve_base_model
 from .model_data import PuzzleData
 from .validators import (
     AssignmentValidationResult,
@@ -31,6 +32,9 @@ __all__ = [
     "GridEdge",
     "GridGraph",
     "PuzzleData",
+    "BaseMilpModel",
+    "BaseMilpSolveResult",
+    "GalaxyAssignment",
     "AssignmentValidationResult",
     "CandidateAssignment",
     "admissible_cells",
@@ -46,4 +50,5 @@ __all__ = [
     "twin_cell",
     "twin_map",
     "validate_assignment",
+    "solve_base_model",
 ]
