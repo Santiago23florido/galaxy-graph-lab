@@ -12,7 +12,17 @@ from .geometry import (
     twin_map,
 )
 from .graph import GridEdge, GridGraph
-from .milp import BaseMilpModel, BaseMilpSolveResult, GalaxyAssignment, solve_base_model
+from .milp import (
+    BaseMilpModel,
+    BaseMilpSolveResult,
+    DirectedFlowKey,
+    FlowMilpModel,
+    FlowMilpSolveResult,
+    GalaxyAssignment,
+    SourceFlowKey,
+    solve_base_model,
+    solve_flow_model,
+)
 from .model_data import PuzzleData
 from .validators import (
     AssignmentValidationResult,
@@ -34,7 +44,11 @@ __all__ = [
     "PuzzleData",
     "BaseMilpModel",
     "BaseMilpSolveResult",
+    "DirectedFlowKey",
+    "FlowMilpModel",
+    "FlowMilpSolveResult",
     "GalaxyAssignment",
+    "SourceFlowKey",
     "AssignmentValidationResult",
     "CandidateAssignment",
     "admissible_cells",
@@ -51,4 +65,5 @@ __all__ = [
     "twin_map",
     "validate_assignment",
     "solve_base_model",
+    "solve_flow_model",
 ]
