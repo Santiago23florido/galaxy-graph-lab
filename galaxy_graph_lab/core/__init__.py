@@ -27,6 +27,11 @@ from .model_data import PuzzleData
 from .solver_service import (
     DEFAULT_SOLVER_BACKEND,
     PuzzleSolveResult,
+    SOLVER_STATUS_BACKEND_UNAVAILABLE,
+    SOLVER_STATUS_ERROR,
+    SOLVER_STATUS_INFEASIBLE,
+    SOLVER_STATUS_SOLVED,
+    SOLVER_STATUS_UNSUPPORTED_BACKEND,
     solve_puzzle,
 )
 from .validators import (
@@ -55,6 +60,11 @@ __all__ = [
     "FlowMilpSolveResult",
     "GalaxyAssignment",
     "PuzzleSolveResult",
+    "SOLVER_STATUS_BACKEND_UNAVAILABLE",
+    "SOLVER_STATUS_ERROR",
+    "SOLVER_STATUS_INFEASIBLE",
+    "SOLVER_STATUS_SOLVED",
+    "SOLVER_STATUS_UNSUPPORTED_BACKEND",
     "SourceFlowKey",
     "AssignmentValidationResult",
     "CandidateAssignment",

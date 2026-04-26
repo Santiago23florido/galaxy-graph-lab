@@ -10,6 +10,11 @@ from galaxy_graph_lab.core import (
     FlowMilpSolveResult,
     PuzzleData,
     PuzzleSolveResult,
+    SOLVER_STATUS_BACKEND_UNAVAILABLE,
+    SOLVER_STATUS_ERROR,
+    SOLVER_STATUS_INFEASIBLE,
+    SOLVER_STATUS_SOLVED,
+    SOLVER_STATUS_UNSUPPORTED_BACKEND,
     solve_puzzle,
     validate_assignment,
 )
@@ -26,6 +31,8 @@ class SolverServiceTests(unittest.TestCase):
         self.assertIsInstance(result, PuzzleSolveResult)
         self.assertTrue(result.success)
         self.assertEqual(result.backend_name, "exact_flow")
+        self.assertEqual(result.status_label, SOLVER_STATUS_SOLVED)
+        self.assertEqual(result.message, "Solution found.")
         self.assertIsNotNone(result.assignment)
         self.assertEqual(
             result.assignment.cells_by_center["g0"],
@@ -64,7 +71,101 @@ class SolverServiceTests(unittest.TestCase):
         self.assertFalse(result.success)
         self.assertEqual(result.backend_name, "exact_flow")
         self.assertEqual(result.status_code, 9)
-        self.assertEqual(result.message, "backend unavailable")
+        self.assertEqual(result.status_label, SOLVER_STATUS_ERROR)
+        self.assertEqual(
+            result.message,
+            "The solver could not complete successfully: backend unavailable",
+        )
+        self.assertIsNone(result.assignment)
+
+    def test_solve_puzzle_reports_infeasible_puzzle_with_ui_friendly_message(self) -> None:
+        puzzle_data = PuzzleData.from_specs(
+            BoardSpec(rows=1, cols=1),
+            [CenterSpec.from_coordinates("g0", 0, 0)],
+        )
+        backend_result = FlowMilpSolveResult(
+            success=False,
+            status=2,
+            message="The problem is infeasible.",
+            objective_value=None,
+            mip_gap=None,
+            mip_node_count=None,
+            assignment=None,
+            assignment_variable_values=None,
+            directed_flow_values=None,
+            source_flow_values=None,
+        )
+
+        with patch(
+            "galaxy_graph_lab.core.solver_service.solve_flow_model",
+            return_value=backend_result,
+        ):
+            result = solve_puzzle(puzzle_data)
+
+        self.assertFalse(result.success)
+        self.assertEqual(result.status_code, 2)
+        self.assertEqual(result.status_label, SOLVER_STATUS_INFEASIBLE)
+        self.assertEqual(result.message, "No feasible solution exists for this puzzle.")
+        self.assertIsNone(result.assignment)
+
+    def test_solve_puzzle_reports_unsupported_backend(self) -> None:
+        puzzle_data = PuzzleData.from_specs(
+            BoardSpec(rows=1, cols=1),
+            [CenterSpec.from_coordinates("g0", 0, 0)],
+        )
+
+        result = solve_puzzle(puzzle_data, backend="mock_backend")
+
+        self.assertFalse(result.success)
+        self.assertEqual(result.backend_name, "mock_backend")
+        self.assertEqual(result.status_code, -1)
+        self.assertEqual(result.status_label, SOLVER_STATUS_UNSUPPORTED_BACKEND)
+        self.assertEqual(
+            result.message,
+            "Solver backend 'mock_backend' is not supported.",
+        )
+        self.assertIsNone(result.assignment)
+
+    def test_solve_puzzle_reports_backend_unavailable(self) -> None:
+        puzzle_data = PuzzleData.from_specs(
+            BoardSpec(rows=1, cols=1),
+            [CenterSpec.from_coordinates("g0", 0, 0)],
+        )
+
+        with patch(
+            "galaxy_graph_lab.core.solver_service.solve_flow_model",
+            side_effect=ModuleNotFoundError("No module named 'scipy'"),
+        ):
+            result = solve_puzzle(puzzle_data)
+
+        self.assertFalse(result.success)
+        self.assertEqual(result.status_code, -2)
+        self.assertEqual(result.status_label, SOLVER_STATUS_BACKEND_UNAVAILABLE)
+        self.assertEqual(
+            result.message,
+            "Solver backend 'exact_flow' is unavailable: No module named 'scipy'.",
+        )
+        self.assertIsNone(result.assignment)
+
+    def test_solve_puzzle_reports_internal_solver_error(self) -> None:
+        puzzle_data = PuzzleData.from_specs(
+            BoardSpec(rows=1, cols=1),
+            [CenterSpec.from_coordinates("g0", 0, 0)],
+        )
+
+        with patch(
+            "galaxy_graph_lab.core.solver_service.solve_flow_model",
+            side_effect=RuntimeError("unexpected failure"),
+        ):
+            result = solve_puzzle(puzzle_data)
+
+        self.assertFalse(result.success)
+        self.assertEqual(result.status_code, -3)
+        self.assertEqual(result.status_label, SOLVER_STATUS_ERROR)
+        self.assertEqual(
+            result.message,
+            "The solver raised an internal error: unexpected failure.",
+        )
         self.assertIsNone(result.assignment)
 
 
