@@ -23,8 +23,8 @@ def load_phase_a_puzzle() -> FixedPuzzle:
     centers = (
         CenterSpec.from_coordinates("A", 1, 1),
         CenterSpec.from_coordinates("B", 1, 4.5),
-        CenterSpec.from_coordinates("C", 3.5, 2.5),
-        CenterSpec.from_coordinates("D", 5, 5),
+        CenterSpec.from_coordinates("C", 3.5,3),
+        CenterSpec.from_coordinates("D", 5.5, 5),
         CenterSpec.from_coordinates("E", 5.5, 1.5),
     )
 

@@ -1,13 +1,14 @@
 from __future__ import annotations
 
+from collections.abc import Mapping
 from dataclasses import dataclass
 
 import pygame
 
 try:
-    from ..core import Cell, CenterSpec, PuzzleData
+    from ..core import AssignmentValidationResult, Cell, CenterSpec, PuzzleData
 except ImportError:
-    from core import Cell, CenterSpec, PuzzleData
+    from core import AssignmentValidationResult, Cell, CenterSpec, PuzzleData
 
 from .puzzle_loader import FixedPuzzle
 
@@ -23,6 +24,8 @@ _CENTER_OUTLINE_COLOR = (15, 17, 20)
 _CELL_FILL_ALPHA = 140
 _HOVER_CELL_COLOR = (255, 255, 255)
 _SELECTED_CELL_COLOR = (61, 193, 211)
+_VALIDATION_OK_COLOR = (88, 191, 116)
+_VALIDATION_FAIL_COLOR = (226, 96, 96)
 _HOVER_CENTER_RING_COLOR = (255, 255, 255)
 _SELECTED_CENTER_RING_COLOR = (61, 193, 211)
 _CENTER_COLORS = (
@@ -196,6 +199,7 @@ def draw_phase_a_scene(
     hovered_hit: GeometryHit | None,
     last_hit: GeometryHit | None,
     selected_center_id: str | None,
+    validation_result: AssignmentValidationResult,
     title_font: pygame.font.Font,
     body_font: pygame.font.Font,
     small_font: pygame.font.Font,
@@ -227,6 +231,7 @@ def draw_phase_a_scene(
         hovered_hit,
         last_hit,
         selected_center_id,
+        validation_result,
         title_font,
         body_font,
         small_font,
@@ -328,6 +333,7 @@ def _draw_sidebar(
     hovered_hit: GeometryHit | None,
     last_hit: GeometryHit | None,
     selected_center_id: str | None,
+    validation_result: AssignmentValidationResult,
     title_font: pygame.font.Font,
     body_font: pygame.font.Font,
     small_font: pygame.font.Font,
@@ -354,12 +360,15 @@ def _draw_sidebar(
     surface.blit(centers_line, (left, top))
     top += centers_line.get_height() + 20
 
-    phase_line = small_font.render("Phase C edits tentative assignments.", True, _SUBTEXT_COLOR)
+    phase_line = small_font.render("Phase D validates the live tentative assignment.", True, _SUBTEXT_COLOR)
     note_line = small_font.render("Select a center, then click cells to toggle them.", True, _SUBTEXT_COLOR)
+    reset_line = small_font.render("Press R to clear the board state.", True, _SUBTEXT_COLOR)
     surface.blit(phase_line, (left, top))
     top += phase_line.get_height() + 4
     surface.blit(note_line, (left, top))
-    top += note_line.get_height() + 18
+    top += note_line.get_height() + 4
+    surface.blit(reset_line, (left, top))
+    top += reset_line.get_height() + 18
 
     selected_title = body_font.render("Selected Center", True, _TEXT_COLOR)
     surface.blit(selected_title, (left, top))
@@ -386,6 +395,28 @@ def _draw_sidebar(
     surface.blit(last_click_label, (left, top))
     top += last_click_label.get_height() + 18
 
+    validation_title = body_font.render("Validation", True, _TEXT_COLOR)
+    surface.blit(validation_title, (left, top))
+    top += validation_title.get_height() + 10
+
+    overall_label = "VALID" if validation_result.is_valid else "INVALID"
+    overall_color = _VALIDATION_OK_COLOR if validation_result.is_valid else _VALIDATION_FAIL_COLOR
+    overall_text = small_font.render(f"Overall: {overall_label}", True, overall_color)
+    surface.blit(overall_text, (left, top))
+    top += overall_text.get_height() + 10
+
+    validation_rows = (
+        ("Partition", validation_result.partition_ok),
+        ("Admissibility", validation_result.admissibility_ok),
+        ("Symmetry", validation_result.symmetry_ok),
+        ("Kernel", validation_result.kernel_ok),
+        ("Connectivity", validation_result.connectivity_ok),
+    )
+    for label, is_ok in validation_rows:
+        _draw_validation_row(surface, small_font, left, top, label, is_ok)
+        top += 22
+
+    top += 12
     assigned_title = body_font.render("Assigned Cells", True, _TEXT_COLOR)
     surface.blit(assigned_title, (left, top))
     top += assigned_title.get_height() + 10
@@ -428,3 +459,18 @@ def _hit_label(hit: GeometryHit | None) -> str:
     if hit.kind == "center" and hit.center_id is not None:
         return f"Center {hit.center_id}"
     return "None"
+
+
+def _draw_validation_row(
+    surface: pygame.Surface,
+    font: pygame.font.Font,
+    left: int,
+    top: int,
+    label: str,
+    is_ok: bool,
+) -> None:
+    color = _VALIDATION_OK_COLOR if is_ok else _VALIDATION_FAIL_COLOR
+    status = "OK" if is_ok else "FAIL"
+    pygame.draw.circle(surface, color, (left + 7, top + 9), 5)
+    text = font.render(f"{label}: {status}", True, _TEXT_COLOR)
+    surface.blit(text, (left + 20, top))

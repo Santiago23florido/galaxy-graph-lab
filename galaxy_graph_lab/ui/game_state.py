@@ -34,6 +34,21 @@ class EditablePuzzleState:
             counts[center_id] += 1
         return MappingProxyType(counts)
 
+    def candidate_assignment(self) -> Mapping[str, tuple[Cell, ...]]:
+        cells_by_center: dict[str, list[Cell]] = {
+            center_id: []
+            for center_id in self.center_ids
+        }
+        for cell, center_id in sorted(self._assigned_center_by_cell.items()):
+            cells_by_center[center_id].append(cell)
+
+        return MappingProxyType(
+            {
+                center_id: tuple(cells)
+                for center_id, cells in cells_by_center.items()
+            }
+        )
+
     def apply_left_click(self, hit: GeometryHit | None) -> None:
         """Apply one Phase C interaction using the current left-click policy."""
 
@@ -58,4 +73,3 @@ class EditablePuzzleState:
     def reset_assignments(self) -> None:
         self._assigned_center_by_cell.clear()
         self.last_hit = None
-
