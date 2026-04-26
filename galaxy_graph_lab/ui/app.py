@@ -2,12 +2,13 @@ from __future__ import annotations
 
 import pygame
 
+from .game_state import EditablePuzzleState
 from .puzzle_loader import load_phase_a_puzzle
 from .renderer import build_board_layout, draw_phase_a_scene, hit_test_board_geometry
 
 
-def run_phase_b_app(max_frames: int | None = None) -> None:
-    """Open the Phase B Pygame window with clickable board geometry."""
+def run_phase_c_app(max_frames: int | None = None) -> None:
+    """Open the Phase C Pygame window with editable tentative assignments."""
 
     pygame.init()
 
@@ -15,7 +16,7 @@ def run_phase_b_app(max_frames: int | None = None) -> None:
         puzzle = load_phase_a_puzzle()
         layout = build_board_layout(puzzle.puzzle_data)
         surface = pygame.display.set_mode((layout.window_width, layout.window_height))
-        pygame.display.set_caption("Galaxy Graph Lab - Phase B")
+        pygame.display.set_caption("Galaxy Graph Lab - Phase C")
 
         clock = pygame.time.Clock()
         title_font = pygame.font.Font(None, 34)
@@ -25,7 +26,9 @@ def run_phase_b_app(max_frames: int | None = None) -> None:
         running = True
         frame_count = 0
         hovered_hit = None
-        selected_hit = None
+        game_state = EditablePuzzleState.from_center_ids(
+            tuple(center.id for center in puzzle.puzzle_data.centers)
+        )
 
         while running:
             for event in pygame.event.get():
@@ -33,6 +36,8 @@ def run_phase_b_app(max_frames: int | None = None) -> None:
                     running = False
                 elif event.type == pygame.KEYDOWN and event.key == pygame.K_ESCAPE:
                     running = False
+                elif event.type == pygame.KEYDOWN and event.key == pygame.K_r:
+                    game_state.reset_assignments()
                 elif event.type == pygame.MOUSEMOTION:
                     hovered_hit = hit_test_board_geometry(
                         puzzle.puzzle_data,
@@ -40,18 +45,21 @@ def run_phase_b_app(max_frames: int | None = None) -> None:
                         event.pos,
                     )
                 elif event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
-                    selected_hit = hit_test_board_geometry(
+                    clicked_hit = hit_test_board_geometry(
                         puzzle.puzzle_data,
                         layout,
                         event.pos,
                     )
+                    game_state.apply_left_click(clicked_hit)
 
             draw_phase_a_scene(
                 surface,
                 puzzle,
                 layout,
+                assigned_center_by_cell=game_state.assigned_center_by_cell,
                 hovered_hit=hovered_hit,
-                selected_hit=selected_hit,
+                last_hit=game_state.last_hit,
+                selected_center_id=game_state.selected_center_id,
                 title_font=title_font,
                 body_font=body_font,
                 small_font=small_font,
@@ -66,7 +74,13 @@ def run_phase_b_app(max_frames: int | None = None) -> None:
         pygame.quit()
 
 
+def run_phase_b_app(max_frames: int | None = None) -> None:
+    """Compatibility wrapper for the previous Phase B entrypoint name."""
+
+    run_phase_c_app(max_frames=max_frames)
+
+
 def run_phase_a_app(max_frames: int | None = None) -> None:
     """Compatibility wrapper for the previous Phase A entrypoint name."""
 
-    run_phase_b_app(max_frames=max_frames)
+    run_phase_c_app(max_frames=max_frames)

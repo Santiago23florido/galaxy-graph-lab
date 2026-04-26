@@ -20,6 +20,7 @@ _LABEL_COLOR = (208, 214, 222)
 _TEXT_COLOR = (233, 238, 243)
 _SUBTEXT_COLOR = (172, 180, 190)
 _CENTER_OUTLINE_COLOR = (15, 17, 20)
+_CELL_FILL_ALPHA = 140
 _HOVER_CELL_COLOR = (255, 255, 255)
 _SELECTED_CELL_COLOR = (61, 193, 211)
 _HOVER_CENTER_RING_COLOR = (255, 255, 255)
@@ -191,29 +192,41 @@ def draw_phase_a_scene(
     surface: pygame.Surface,
     puzzle: FixedPuzzle,
     layout: BoardLayout,
+    assigned_center_by_cell: dict[Cell, str] | Mapping[Cell, str],
     hovered_hit: GeometryHit | None,
-    selected_hit: GeometryHit | None,
+    last_hit: GeometryHit | None,
+    selected_center_id: str | None,
     title_font: pygame.font.Font,
     body_font: pygame.font.Font,
     small_font: pygame.font.Font,
 ) -> None:
-    """Draw the fixed puzzle board and its clickable geometry."""
+    """Draw the fixed puzzle board and its current editable state."""
 
     surface.fill(_BACKGROUND_COLOR)
     pygame.draw.rect(surface, _BOARD_COLOR, layout.board_rect, border_radius=12)
     pygame.draw.rect(surface, _PANEL_COLOR, layout.sidebar_rect, border_radius=12)
 
+    _draw_assignment_fills(surface, puzzle.puzzle_data, layout, assigned_center_by_cell)
     _draw_cell_highlight(surface, layout, hovered_hit, _HOVER_CELL_COLOR, 2)
-    _draw_cell_highlight(surface, layout, selected_hit, _SELECTED_CELL_COLOR, 4)
+    _draw_cell_highlight(surface, layout, last_hit, _SELECTED_CELL_COLOR, 4)
     _draw_grid(surface, puzzle.puzzle_data, layout)
     _draw_axis_labels(surface, puzzle.puzzle_data, layout, body_font)
-    _draw_centers(surface, puzzle.puzzle_data, layout, hovered_hit, selected_hit, body_font)
+    _draw_centers(
+        surface,
+        puzzle.puzzle_data,
+        layout,
+        hovered_hit,
+        selected_center_id,
+        body_font,
+    )
     _draw_sidebar(
         surface,
         puzzle,
         layout,
+        assigned_center_by_cell,
         hovered_hit,
-        selected_hit,
+        last_hit,
+        selected_center_id,
         title_font,
         body_font,
         small_font,
@@ -225,6 +238,27 @@ def _draw_grid(surface: pygame.Surface, puzzle_data: PuzzleData, layout: BoardLa
         pygame.draw.rect(surface, _GRID_COLOR, cell_rect(layout, cell), width=1, border_radius=3)
 
     pygame.draw.rect(surface, _GRID_COLOR, layout.board_rect, width=2, border_radius=12)
+
+
+def _draw_assignment_fills(
+    surface: pygame.Surface,
+    puzzle_data: PuzzleData,
+    layout: BoardLayout,
+    assigned_center_by_cell: dict[Cell, str] | Mapping[Cell, str],
+) -> None:
+    fill_layer = pygame.Surface((layout.board_width, layout.board_height), pygame.SRCALPHA)
+    center_index_by_id = {
+        center.id: index
+        for index, center in enumerate(puzzle_data.centers)
+    }
+
+    for cell, center_id in assigned_center_by_cell.items():
+        rect = cell_rect(layout, cell).move(-layout.board_left, -layout.board_top)
+        color = _center_color(center_index_by_id[center_id])
+        fill_color = (*color, _CELL_FILL_ALPHA)
+        pygame.draw.rect(fill_layer, fill_color, rect, border_radius=8)
+
+    surface.blit(fill_layer, (layout.board_left, layout.board_top))
 
 
 def _draw_cell_highlight(
@@ -266,7 +300,7 @@ def _draw_centers(
     puzzle_data: PuzzleData,
     layout: BoardLayout,
     hovered_hit: GeometryHit | None,
-    selected_hit: GeometryHit | None,
+    selected_center_id: str | None,
     font: pygame.font.Font,
 ) -> None:
     for index, center in enumerate(puzzle_data.centers):
@@ -277,7 +311,7 @@ def _draw_centers(
         pygame.draw.circle(surface, _CENTER_OUTLINE_COLOR, (x, y), radius, width=2)
         if hovered_hit is not None and hovered_hit.kind == "center" and hovered_hit.center_id == center.id:
             pygame.draw.circle(surface, _HOVER_CENTER_RING_COLOR, (x, y), radius + 4, width=2)
-        if selected_hit is not None and selected_hit.kind == "center" and selected_hit.center_id == center.id:
+        if selected_center_id == center.id:
             pygame.draw.circle(surface, _SELECTED_CENTER_RING_COLOR, (x, y), radius + 8, width=3)
 
         label = font.render(center.id, True, _CENTER_OUTLINE_COLOR)
@@ -290,8 +324,10 @@ def _draw_sidebar(
     surface: pygame.Surface,
     puzzle: FixedPuzzle,
     layout: BoardLayout,
+    assigned_center_by_cell: dict[Cell, str] | Mapping[Cell, str],
     hovered_hit: GeometryHit | None,
-    selected_hit: GeometryHit | None,
+    last_hit: GeometryHit | None,
+    selected_center_id: str | None,
     title_font: pygame.font.Font,
     body_font: pygame.font.Font,
     small_font: pygame.font.Font,
@@ -318,12 +354,23 @@ def _draw_sidebar(
     surface.blit(centers_line, (left, top))
     top += centers_line.get_height() + 20
 
-    phase_line = small_font.render("Phase B checks click geometry.", True, _SUBTEXT_COLOR)
-    note_line = small_font.render("Click cells or center markers to inspect hits.", True, _SUBTEXT_COLOR)
+    phase_line = small_font.render("Phase C edits tentative assignments.", True, _SUBTEXT_COLOR)
+    note_line = small_font.render("Select a center, then click cells to toggle them.", True, _SUBTEXT_COLOR)
     surface.blit(phase_line, (left, top))
     top += phase_line.get_height() + 4
     surface.blit(note_line, (left, top))
     top += note_line.get_height() + 18
+
+    selected_title = body_font.render("Selected Center", True, _TEXT_COLOR)
+    surface.blit(selected_title, (left, top))
+    top += selected_title.get_height() + 6
+    selected_center_label = small_font.render(
+        selected_center_id if selected_center_id is not None else "None",
+        True,
+        _TEXT_COLOR,
+    )
+    surface.blit(selected_center_label, (left, top))
+    top += selected_center_label.get_height() + 14
 
     hovered_title = body_font.render("Hover", True, _TEXT_COLOR)
     surface.blit(hovered_title, (left, top))
@@ -332,24 +379,40 @@ def _draw_sidebar(
     surface.blit(hovered_label, (left, top))
     top += hovered_label.get_height() + 14
 
-    selected_title = body_font.render("Last Click", True, _TEXT_COLOR)
-    surface.blit(selected_title, (left, top))
-    top += selected_title.get_height() + 6
-    selected_label = small_font.render(_hit_label(selected_hit), True, _TEXT_COLOR)
-    surface.blit(selected_label, (left, top))
-    top += selected_label.get_height() + 18
+    last_click_title = body_font.render("Last Click", True, _TEXT_COLOR)
+    surface.blit(last_click_title, (left, top))
+    top += last_click_title.get_height() + 6
+    last_click_label = small_font.render(_hit_label(last_hit), True, _TEXT_COLOR)
+    surface.blit(last_click_label, (left, top))
+    top += last_click_label.get_height() + 18
+
+    assigned_title = body_font.render("Assigned Cells", True, _TEXT_COLOR)
+    surface.blit(assigned_title, (left, top))
+    top += assigned_title.get_height() + 10
 
     centers_title = body_font.render("Centers", True, _TEXT_COLOR)
     surface.blit(centers_title, (left, top))
     top += centers_title.get_height() + 12
 
+    counts_by_center = {
+        center.id: 0
+        for center in puzzle.puzzle_data.centers
+    }
+    for center_id in assigned_center_by_cell.values():
+        counts_by_center[center_id] += 1
+
     for index, center in enumerate(puzzle.puzzle_data.centers):
         color = _center_color(index)
         pygame.draw.circle(surface, color, (left + 10, top + 10), 8)
         pygame.draw.circle(surface, _CENTER_OUTLINE_COLOR, (left + 10, top + 10), 8, width=1)
+        if selected_center_id == center.id:
+            pygame.draw.circle(surface, _SELECTED_CENTER_RING_COLOR, (left + 10, top + 10), 11, width=2)
 
         label = small_font.render(
-            f"{center.id}: ({float(center.row_coord)}, {float(center.col_coord)})",
+            (
+                f"{center.id}: ({float(center.row_coord)}, {float(center.col_coord)})"
+                f" [{counts_by_center[center.id]}]"
+            ),
             True,
             _TEXT_COLOR,
         )
