@@ -21,6 +21,15 @@ from galaxy_graph_lab.core import (
 
 
 class SolverServiceTests(unittest.TestCase):
+    def _guided_puzzle_data(self) -> PuzzleData:
+        return PuzzleData.from_specs(
+            BoardSpec(rows=3, cols=3),
+            [
+                CenterSpec.from_coordinates("A", 0, 1),
+                CenterSpec.from_coordinates("B", 1.5, 1),
+            ],
+        )
+
     def test_solve_puzzle_wraps_exact_flow_as_public_entrypoint(self) -> None:
         board = BoardSpec(rows=1, cols=3)
         center = CenterSpec.from_coordinates("g0", 0, 1)
@@ -41,6 +50,54 @@ class SolverServiceTests(unittest.TestCase):
 
         validation = validate_assignment(puzzle_data, result.assignment.cells_by_center)
         self.assertTrue(validation.is_valid)
+
+    def test_solve_puzzle_keeps_all_current_selections_when_that_is_feasible(self) -> None:
+        puzzle_data = self._guided_puzzle_data()
+
+        result = solve_puzzle(
+            puzzle_data,
+            preferred_assignment_by_cell={
+                Cell(0, 0): "A",
+                Cell(1, 0): "B",
+            },
+        )
+
+        self.assertTrue(result.success)
+        self.assertEqual(result.status_label, SOLVER_STATUS_SOLVED)
+        self.assertEqual(result.solution_mode, "guided_exact")
+        self.assertEqual(result.preferred_assignment_count, 2)
+        self.assertEqual(result.matched_preference_count, 2)
+        self.assertEqual(result.mismatch_count, 0)
+        self.assertEqual(
+            result.message,
+            "Solution found and it keeps all current selections.",
+        )
+        self.assertEqual(result.assignment.assigned_center_by_cell[Cell(0, 0)], "A")
+        self.assertEqual(result.assignment.assigned_center_by_cell[Cell(1, 0)], "B")
+
+    def test_solve_puzzle_falls_back_to_minimum_mismatch_solution(self) -> None:
+        puzzle_data = self._guided_puzzle_data()
+
+        result = solve_puzzle(
+            puzzle_data,
+            preferred_assignment_by_cell={
+                Cell(0, 0): "A",
+                Cell(1, 0): "A",
+            },
+        )
+
+        self.assertTrue(result.success)
+        self.assertEqual(result.status_label, SOLVER_STATUS_SOLVED)
+        self.assertEqual(result.solution_mode, "guided_min_mismatch")
+        self.assertEqual(result.preferred_assignment_count, 2)
+        self.assertEqual(result.matched_preference_count, 1)
+        self.assertEqual(result.mismatch_count, 1)
+        self.assertEqual(
+            result.message,
+            "Current selections cannot all be satisfied. Loaded the closest solution with 1 mismatch(es).",
+        )
+        self.assertEqual(result.assignment.assigned_center_by_cell[Cell(0, 0)], "A")
+        self.assertEqual(result.assignment.assigned_center_by_cell[Cell(1, 0)], "B")
 
     def test_solve_puzzle_normalizes_backend_result_shape(self) -> None:
         puzzle_data = PuzzleData.from_specs(

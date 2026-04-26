@@ -383,14 +383,25 @@ class FlowMilpModel:
     def solve(
         self,
         options: Mapping[str, object] | None = None,
+        *,
+        objective: Sequence[float] | None = None,
+        extra_constraints: Sequence[LinearConstraint] = (),
     ) -> FlowMilpSolveResult:
-        """Solve the exact flow MILP as a feasibility problem with zero objective."""
+        """Solve the exact flow MILP with optional custom objective and constraints."""
+
+        objective_vector = self.objective
+        if objective is not None:
+            objective_vector = np.asarray(objective, dtype=float)
+            if objective_vector.shape != (self.num_variables,):
+                raise ValueError("Custom objective length does not match the flow model.")
+
+        constraints = self.constraints + tuple(extra_constraints)
 
         result = milp(
-            c=self.objective,
+            c=objective_vector,
             integrality=self.integrality,
             bounds=self.bounds,
-            constraints=self.constraints,
+            constraints=constraints,
             options=None if options is None else dict(options),
         )
 

@@ -38,12 +38,17 @@ def component_index_by_cell(
 def comparison_by_cell(
     current_assignment_by_cell: Mapping[Cell, str],
     exact_assignment_by_cell: Mapping[Cell, str],
+    *,
+    cells_to_compare: Iterable[Cell] | None = None,
 ) -> Mapping[Cell, bool]:
-    all_cells = set(current_assignment_by_cell).union(exact_assignment_by_cell)
+    if cells_to_compare is None:
+        cells = tuple(current_assignment_by_cell)
+    else:
+        cells = tuple(cells_to_compare)
     return MappingProxyType(
         {
             cell: current_assignment_by_cell.get(cell) == exact_assignment_by_cell.get(cell)
-            for cell in all_cells
+            for cell in cells
         }
     )
 

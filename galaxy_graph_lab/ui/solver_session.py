@@ -16,41 +16,94 @@ class SolverSessionState:
     solution_visible: bool = False
     solution_loaded_into_board: bool = False
     solver_result_requested: bool = False
+    manual_assignment_snapshot: dict[Cell, str] | None = None
+    manual_edits_after_solution: bool = False
 
     @property
     def solver_result_cached(self) -> bool:
         return self.solver_result is not None
 
     @property
-    def board_source_label(self) -> str:
+    def board_mode_label(self) -> str:
+        if self.solution_loaded_into_board and self.manual_edits_after_solution:
+            return "mixed"
         if self.solution_loaded_into_board:
-            return "solver"
-        return "player"
+            return "solver-loaded"
+        return "manual"
+
+    @property
+    def can_restore_manual_snapshot(self) -> bool:
+        return self.manual_assignment_snapshot is not None
 
     def request_solution(
         self,
         puzzle_data: PuzzleData,
         *,
         options: Mapping[str, object] | None = None,
+        preferred_assignment_by_cell: Mapping[Cell, str] | None = None,
     ) -> PuzzleSolveResult:
         self.solver_result_requested = True
-        self.solver_result = solve_puzzle(puzzle_data, options=options)
+        self.solver_result = solve_puzzle(
+            puzzle_data,
+            options=options,
+            preferred_assignment_by_cell=preferred_assignment_by_cell,
+        )
         self.solver_status_label = self.solver_result.status_label
         self.solver_message = self.solver_result.message
         return self.solver_result
+
+    def capture_manual_snapshot(
+        self,
+        assigned_center_by_cell: Mapping[Cell, str],
+    ) -> None:
+        self.manual_assignment_snapshot = dict(assigned_center_by_cell)
 
     def solver_assignment_by_cell(self) -> Mapping[Cell, str] | None:
         if self.solver_result is None or self.solver_result.assignment is None:
             return None
         return self.solver_result.assignment.assigned_center_by_cell
 
+    def comparison_reference_assignment_by_cell(
+        self,
+        current_assignment_by_cell: Mapping[Cell, str],
+    ) -> Mapping[Cell, str]:
+        if (
+            self.solution_loaded_into_board
+            and not self.manual_edits_after_solution
+            and self.manual_assignment_snapshot is not None
+        ):
+            return dict(self.manual_assignment_snapshot)
+        return current_assignment_by_cell
+
     def mark_solution_loaded(self) -> None:
         self.solution_visible = True
         self.solution_loaded_into_board = True
+        self.manual_edits_after_solution = False
 
-    def mark_player_controlled(self) -> None:
+    def mark_manual_edit(self) -> None:
+        if self.solution_loaded_into_board:
+            self.solution_visible = True
+            self.manual_edits_after_solution = True
+
+    def clear_solution_view(self) -> None:
         self.solution_visible = False
         self.solution_loaded_into_board = False
+        self.manual_edits_after_solution = False
+
+    def restore_manual_snapshot(self) -> Mapping[Cell, str] | None:
+        if self.manual_assignment_snapshot is None:
+            return None
+
+        snapshot = dict(self.manual_assignment_snapshot)
+        self.manual_assignment_snapshot = None
+        self.clear_solution_view()
+        return snapshot
+
+    def mark_player_controlled(self) -> None:
+        self.clear_solution_view()
+
+    def discard_manual_snapshot(self) -> None:
+        self.manual_assignment_snapshot = None
 
 
 __all__ = ["SolverSessionState"]
