@@ -4,7 +4,7 @@ import os
 import unittest
 from unittest.mock import patch
 
-from galaxy_graph_lab.core import BoardSpec, Cell, CenterSpec, PuzzleData
+from galaxy_graph_lab.core import BoardSpec, Cell, CenterSpec, GalaxyAssignment, PuzzleData
 from galaxy_graph_lab.ui.app import run_phase_f_app
 from galaxy_graph_lab.ui.debug_tools import (
     DebugOverlayState,
@@ -16,6 +16,27 @@ from galaxy_graph_lab.ui.game_state import EditablePuzzleState
 
 
 class PhaseFPygameUiTests(unittest.TestCase):
+    def test_load_solver_assignment_replaces_the_full_tentative_board(self) -> None:
+        state = EditablePuzzleState.from_center_ids(("A", "B"))
+        state.replace_assignments({Cell(0, 0): "A", Cell(0, 1): "B"})
+        state.last_hit = object()  # type: ignore[assignment]
+        solver_assignment = GalaxyAssignment(
+            assigned_center_by_cell={Cell(1, 0): "B"},
+            cells_by_center={"A": (), "B": (Cell(1, 0),)},
+        )
+
+        state.load_solver_assignment(solver_assignment)
+
+        self.assertEqual(
+            dict(state.assigned_center_by_cell),
+            {Cell(1, 0): "B"},
+        )
+        self.assertEqual(
+            dict(state.candidate_assignment()),
+            {"A": (), "B": (Cell(1, 0),)},
+        )
+        self.assertIsNone(state.last_hit)
+
     def test_replace_assignments_loads_solver_like_mapping(self) -> None:
         state = EditablePuzzleState.from_center_ids(("A", "B"))
         state.replace_assignments({Cell(0, 0): "A", Cell(0, 1): "B"})

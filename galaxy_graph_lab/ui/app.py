@@ -67,7 +67,7 @@ def run_phase_f_app(max_frames: int | None = None) -> None:
                 elif event.type == pygame.KEYDOWN and event.key == pygame.K_l:
                     exact_result = debug_state.ensure_exact_flow_result(puzzle.puzzle_data)
                     if exact_result.assignment is not None:
-                        game_state.replace_assignments(exact_result.assignment.assigned_center_by_cell)
+                        game_state.load_solver_assignment(exact_result.assignment)
                         validation_result = validate_assignment(
                             puzzle.puzzle_data,
                             game_state.candidate_assignment(),
