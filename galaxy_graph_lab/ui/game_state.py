@@ -49,6 +49,9 @@ class EditablePuzzleState:
             }
         )
 
+    def replace_assignments(self, assigned_center_by_cell: Mapping[Cell, str]) -> None:
+        self._assigned_center_by_cell = dict(assigned_center_by_cell)
+
     def apply_left_click(self, hit: GeometryHit | None) -> None:
         """Apply one Phase C interaction using the current left-click policy."""
 

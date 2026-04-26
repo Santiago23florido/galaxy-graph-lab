@@ -10,9 +10,9 @@ import pygame
 
 if __package__ in {None, ""}:
     sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
-    from galaxy_graph_lab.ui.app import run_phase_d_app
+    from galaxy_graph_lab.ui.app import run_phase_f_app
 else:
-    from .ui.app import run_phase_d_app
+    from .ui.app import run_phase_f_app
 
 
 def build_status_report() -> str:
@@ -24,15 +24,15 @@ def build_status_report() -> str:
             f"Python: {sys.version.split()[0]}",
             f"Pygame: {pygame.version.ver}",
             "Status: environment is ready.",
-            "UI Phase: D (in-window validation)",
+            "UI Phase: F (developer-oriented debug features)",
         ]
     )
 
 
 def main() -> None:
-    """Launch the Phase D Pygame window with one fixed puzzle."""
+    """Launch the Phase F Pygame window with one fixed puzzle."""
 
-    run_phase_d_app()
+    run_phase_f_app()
 
 
 if __name__ == "__main__":

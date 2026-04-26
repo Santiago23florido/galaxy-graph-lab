@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from collections.abc import Mapping
 from dataclasses import dataclass
+from types import MappingProxyType
 
 import pygame
 
@@ -20,14 +21,23 @@ _GRID_COLOR = (90, 99, 112)
 _LABEL_COLOR = (208, 214, 222)
 _TEXT_COLOR = (233, 238, 243)
 _SUBTEXT_COLOR = (172, 180, 190)
+_DOMAIN_LABEL_COLOR = (156, 184, 255)
 _CENTER_OUTLINE_COLOR = (15, 17, 20)
 _CELL_FILL_ALPHA = 140
+_DOMAIN_FILL_ALPHA = 50
 _HOVER_CELL_COLOR = (255, 255, 255)
 _SELECTED_CELL_COLOR = (61, 193, 211)
 _VALIDATION_OK_COLOR = (88, 191, 116)
 _VALIDATION_FAIL_COLOR = (226, 96, 96)
+_KERNEL_COLOR = (255, 225, 102)
 _HOVER_CENTER_RING_COLOR = (255, 255, 255)
 _SELECTED_CENTER_RING_COLOR = (61, 193, 211)
+_COMPONENT_COLORS = (
+    (255, 120, 120),
+    (105, 196, 255),
+    (120, 224, 147),
+    (255, 198, 102),
+)
 _CENTER_COLORS = (
     (233, 106, 97),
     (80, 170, 120),
@@ -78,13 +88,33 @@ class GeometryHit:
     center_id: str | None = None
 
 
+@dataclass(frozen=True, slots=True)
+class DebugOverlayView:
+    """Precomputed Phase F debug overlays and sidebar state."""
+
+    show_admissible_domain: bool
+    show_kernel_cells: bool
+    show_components: bool
+    show_solver_comparison: bool
+    admissible_center_id: str | None
+    admissible_cells: tuple[Cell, ...]
+    kernel_cells_by_center: Mapping[str, tuple[Cell, ...]]
+    component_index_by_cell: Mapping[Cell, int]
+    solver_cached: bool
+    solver_success: bool
+    solver_status_label: str
+    comparison_by_cell: Mapping[Cell, bool]
+    comparison_match_count: int | None
+    comparison_mismatch_count: int | None
+
+
 def build_board_layout(
     puzzle_data: PuzzleData,
     *,
     cell_size: int = 72,
     padding: int = 24,
     label_gutter: int = 40,
-    sidebar_width: int = 280,
+    sidebar_width: int = 360,
 ) -> BoardLayout:
     """Return the fixed screen layout for one puzzle instance."""
 
@@ -93,7 +123,7 @@ def build_board_layout(
     board_left = padding + label_gutter
     board_top = padding + label_gutter
     window_width = board_left + board_width + padding + sidebar_width + padding
-    window_height = max(board_top + board_height + padding, 520)
+    window_height = max(board_top + board_height + padding, 760)
 
     return BoardLayout(
         cell_size=cell_size,
@@ -200,6 +230,7 @@ def draw_phase_a_scene(
     last_hit: GeometryHit | None,
     selected_center_id: str | None,
     validation_result: AssignmentValidationResult,
+    debug_view: DebugOverlayView,
     title_font: pygame.font.Font,
     body_font: pygame.font.Font,
     small_font: pygame.font.Font,
@@ -210,10 +241,20 @@ def draw_phase_a_scene(
     pygame.draw.rect(surface, _BOARD_COLOR, layout.board_rect, border_radius=12)
     pygame.draw.rect(surface, _PANEL_COLOR, layout.sidebar_rect, border_radius=12)
 
+    _draw_admissible_domain_overlay(
+        surface,
+        puzzle.puzzle_data,
+        layout,
+        debug_view.admissible_center_id,
+        debug_view.admissible_cells,
+    )
     _draw_assignment_fills(surface, puzzle.puzzle_data, layout, assigned_center_by_cell)
+    _draw_kernel_highlights(surface, puzzle.puzzle_data, layout, debug_view.kernel_cells_by_center)
+    _draw_grid(surface, puzzle.puzzle_data, layout)
+    _draw_component_overlay(surface, layout, debug_view.component_index_by_cell)
+    _draw_solution_comparison(surface, layout, debug_view.comparison_by_cell)
     _draw_cell_highlight(surface, layout, hovered_hit, _HOVER_CELL_COLOR, 2)
     _draw_cell_highlight(surface, layout, last_hit, _SELECTED_CELL_COLOR, 4)
-    _draw_grid(surface, puzzle.puzzle_data, layout)
     _draw_axis_labels(surface, puzzle.puzzle_data, layout, body_font)
     _draw_centers(
         surface,
@@ -232,6 +273,7 @@ def draw_phase_a_scene(
         last_hit,
         selected_center_id,
         validation_result,
+        debug_view,
         title_font,
         body_font,
         small_font,
@@ -266,6 +308,52 @@ def _draw_assignment_fills(
     surface.blit(fill_layer, (layout.board_left, layout.board_top))
 
 
+def _draw_admissible_domain_overlay(
+    surface: pygame.Surface,
+    puzzle_data: PuzzleData,
+    layout: BoardLayout,
+    center_id: str | None,
+    admissible_cells: tuple[Cell, ...],
+) -> None:
+    if center_id is None or not admissible_cells:
+        return
+
+    color_lookup = {
+        center.id: _center_color(index)
+        for index, center in enumerate(puzzle_data.centers)
+    }
+    layer = pygame.Surface((layout.board_width, layout.board_height), pygame.SRCALPHA)
+    fill_color = (*color_lookup[center_id], _DOMAIN_FILL_ALPHA)
+
+    for cell in admissible_cells:
+        rect = cell_rect(layout, cell).move(-layout.board_left, -layout.board_top)
+        pygame.draw.rect(layer, fill_color, rect, border_radius=8)
+
+    surface.blit(layer, (layout.board_left, layout.board_top))
+
+
+def _draw_kernel_highlights(
+    surface: pygame.Surface,
+    puzzle_data: PuzzleData,
+    layout: BoardLayout,
+    kernel_cells_by_center: Mapping[str, tuple[Cell, ...]],
+) -> None:
+    if not kernel_cells_by_center:
+        return
+
+    center_index_by_id = {
+        center.id: index
+        for index, center in enumerate(puzzle_data.centers)
+    }
+
+    for center_id, cells in kernel_cells_by_center.items():
+        color = _center_color(center_index_by_id[center_id])
+        for cell in cells:
+            rect = cell_rect(layout, cell).inflate(-28, -28)
+            pygame.draw.rect(surface, _KERNEL_COLOR, rect, width=3, border_radius=6)
+            pygame.draw.rect(surface, color, rect.inflate(-6, -6), width=2, border_radius=4)
+
+
 def _draw_cell_highlight(
     surface: pygame.Surface,
     layout: BoardLayout,
@@ -277,6 +365,38 @@ def _draw_cell_highlight(
         return
 
     pygame.draw.rect(surface, color, cell_rect(layout, hit.cell), width=width, border_radius=6)
+
+
+def _draw_component_overlay(
+    surface: pygame.Surface,
+    layout: BoardLayout,
+    component_index_by_cell: Mapping[Cell, int],
+) -> None:
+    for cell, component_index in component_index_by_cell.items():
+        color = _COMPONENT_COLORS[component_index % len(_COMPONENT_COLORS)]
+        pygame.draw.rect(
+            surface,
+            color,
+            cell_rect(layout, cell).inflate(-12, -12),
+            width=3,
+            border_radius=6,
+        )
+
+
+def _draw_solution_comparison(
+    surface: pygame.Surface,
+    layout: BoardLayout,
+    comparison_by_cell: Mapping[Cell, bool],
+) -> None:
+    for cell, is_match in comparison_by_cell.items():
+        color = _VALIDATION_OK_COLOR if is_match else _VALIDATION_FAIL_COLOR
+        pygame.draw.rect(
+            surface,
+            color,
+            cell_rect(layout, cell).inflate(-4, -4),
+            width=2,
+            border_radius=6,
+        )
 
 
 def _draw_axis_labels(
@@ -334,6 +454,7 @@ def _draw_sidebar(
     last_hit: GeometryHit | None,
     selected_center_id: str | None,
     validation_result: AssignmentValidationResult,
+    debug_view: DebugOverlayView,
     title_font: pygame.font.Font,
     body_font: pygame.font.Font,
     small_font: pygame.font.Font,
@@ -360,15 +481,18 @@ def _draw_sidebar(
     surface.blit(centers_line, (left, top))
     top += centers_line.get_height() + 20
 
-    phase_line = small_font.render("Phase D validates the live tentative assignment.", True, _SUBTEXT_COLOR)
+    phase_line = small_font.render("Phase F adds solver and geometry debug overlays.", True, _SUBTEXT_COLOR)
     note_line = small_font.render("Select a center, then click cells to toggle them.", True, _SUBTEXT_COLOR)
-    reset_line = small_font.render("Press R to clear the board state.", True, _SUBTEXT_COLOR)
+    reset_line = small_font.render("R reset | A domain | K kernel | C comps", True, _SUBTEXT_COLOR)
+    solver_line = small_font.render("S solve | L load exact | M compare", True, _SUBTEXT_COLOR)
     surface.blit(phase_line, (left, top))
     top += phase_line.get_height() + 4
     surface.blit(note_line, (left, top))
     top += note_line.get_height() + 4
     surface.blit(reset_line, (left, top))
-    top += reset_line.get_height() + 18
+    top += reset_line.get_height() + 4
+    surface.blit(solver_line, (left, top))
+    top += solver_line.get_height() + 18
 
     selected_title = body_font.render("Selected Center", True, _TEXT_COLOR)
     surface.blit(selected_title, (left, top))
@@ -415,6 +539,57 @@ def _draw_sidebar(
     for label, is_ok in validation_rows:
         _draw_validation_row(surface, small_font, left, top, label, is_ok)
         top += 22
+
+    top += 12
+    debug_title = body_font.render("Debug Tools", True, _TEXT_COLOR)
+    surface.blit(debug_title, (left, top))
+    top += debug_title.get_height() + 10
+
+    debug_rows = (
+        ("Admissible Domain", debug_view.show_admissible_domain),
+        ("Kernel Cells", debug_view.show_kernel_cells),
+        ("Selected Components", debug_view.show_components),
+        ("Compare vs Exact", debug_view.show_solver_comparison),
+    )
+    for label, is_on in debug_rows:
+        _draw_toggle_row(surface, small_font, left, top, label, is_on)
+        top += 22
+
+    top += 10
+    solver_title = body_font.render("Exact-Flow Solver", True, _TEXT_COLOR)
+    surface.blit(solver_title, (left, top))
+    top += solver_title.get_height() + 8
+
+    status_color = _VALIDATION_OK_COLOR if debug_view.solver_success else _SUBTEXT_COLOR
+    status_line = small_font.render(debug_view.solver_status_label, True, status_color)
+    surface.blit(status_line, (left, top))
+    top += status_line.get_height() + 6
+
+    if debug_view.show_admissible_domain and debug_view.admissible_center_id is None:
+        domain_hint = small_font.render("Domain overlay waits for a selected center.", True, _DOMAIN_LABEL_COLOR)
+        surface.blit(domain_hint, (left, top))
+        top += domain_hint.get_height() + 6
+
+    if debug_view.show_components and selected_center_id is None:
+        component_hint = small_font.render("Component overlay follows the selected center.", True, _SUBTEXT_COLOR)
+        surface.blit(component_hint, (left, top))
+        top += component_hint.get_height() + 6
+
+    if debug_view.comparison_match_count is not None and debug_view.comparison_mismatch_count is not None:
+        matches_line = small_font.render(
+            f"Matches: {debug_view.comparison_match_count}",
+            True,
+            _VALIDATION_OK_COLOR,
+        )
+        mismatches_line = small_font.render(
+            f"Mismatches: {debug_view.comparison_mismatch_count}",
+            True,
+            _VALIDATION_FAIL_COLOR,
+        )
+        surface.blit(matches_line, (left, top))
+        top += matches_line.get_height() + 4
+        surface.blit(mismatches_line, (left, top))
+        top += mismatches_line.get_height() + 10
 
     top += 12
     assigned_title = body_font.render("Assigned Cells", True, _TEXT_COLOR)
@@ -471,6 +646,21 @@ def _draw_validation_row(
 ) -> None:
     color = _VALIDATION_OK_COLOR if is_ok else _VALIDATION_FAIL_COLOR
     status = "OK" if is_ok else "FAIL"
+    pygame.draw.circle(surface, color, (left + 7, top + 9), 5)
+    text = font.render(f"{label}: {status}", True, _TEXT_COLOR)
+    surface.blit(text, (left + 20, top))
+
+
+def _draw_toggle_row(
+    surface: pygame.Surface,
+    font: pygame.font.Font,
+    left: int,
+    top: int,
+    label: str,
+    is_on: bool,
+) -> None:
+    color = _VALIDATION_OK_COLOR if is_on else _SUBTEXT_COLOR
+    status = "ON" if is_on else "OFF"
     pygame.draw.circle(surface, color, (left + 7, top + 9), 5)
     text = font.render(f"{label}: {status}", True, _TEXT_COLOR)
     surface.blit(text, (left + 20, top))
