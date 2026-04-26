@@ -2,7 +2,6 @@ from __future__ import annotations
 
 from collections.abc import Mapping
 from dataclasses import dataclass
-from types import MappingProxyType
 
 import pygame
 
@@ -30,6 +29,9 @@ _SELECTED_CELL_COLOR = (61, 193, 211)
 _VALIDATION_OK_COLOR = (88, 191, 116)
 _VALIDATION_FAIL_COLOR = (226, 96, 96)
 _KERNEL_COLOR = (255, 225, 102)
+_BUTTON_COLOR = (61, 193, 211)
+_BUTTON_HOVER_COLOR = (82, 215, 232)
+_BUTTON_TEXT_COLOR = (15, 17, 20)
 _HOVER_CENTER_RING_COLOR = (255, 255, 255)
 _SELECTED_CENTER_RING_COLOR = (61, 193, 211)
 _COMPONENT_COLORS = (
@@ -100,9 +102,15 @@ class DebugOverlayView:
     admissible_cells: tuple[Cell, ...]
     kernel_cells_by_center: Mapping[str, tuple[Cell, ...]]
     component_index_by_cell: Mapping[Cell, int]
+    solver_result_requested: bool
     solver_cached: bool
     solver_success: bool
     solver_status_label: str
+    solver_message: str
+    solution_visible: bool
+    solution_loaded_into_board: bool
+    board_source_label: str
+    show_solution_button_hovered: bool
     comparison_by_cell: Mapping[Cell, bool]
     comparison_match_count: int | None
     comparison_mismatch_count: int | None
@@ -123,7 +131,7 @@ def build_board_layout(
     board_left = padding + label_gutter
     board_top = padding + label_gutter
     window_width = board_left + board_width + padding + sidebar_width + padding
-    window_height = max(board_top + board_height + padding, 760)
+    window_height = max(board_top + board_height + padding, 940)
 
     return BoardLayout(
         cell_size=cell_size,
@@ -278,6 +286,24 @@ def draw_phase_a_scene(
         body_font,
         small_font,
     )
+
+
+def show_solution_button_rect(
+    layout: BoardLayout,
+    title_font: pygame.font.Font,
+    body_font: pygame.font.Font,
+    small_font: pygame.font.Font,
+) -> pygame.Rect:
+    left = layout.sidebar_rect.left + 18
+    top = layout.sidebar_rect.top + 18
+    top += title_font.get_height() + 16
+    top += body_font.get_height() + 6
+    top += body_font.get_height() + 20
+    top += small_font.get_height() + 4
+    top += small_font.get_height() + 4
+    top += small_font.get_height() + 4
+    top += small_font.get_height() + 18
+    return pygame.Rect(left, top, layout.sidebar_rect.width - 36, 38)
 
 
 def _draw_grid(surface: pygame.Surface, puzzle_data: PuzzleData, layout: BoardLayout) -> None:
@@ -484,7 +510,7 @@ def _draw_sidebar(
     phase_line = small_font.render("Phase F adds solver and geometry debug overlays.", True, _SUBTEXT_COLOR)
     note_line = small_font.render("Select a center, then click cells to toggle them.", True, _SUBTEXT_COLOR)
     reset_line = small_font.render("R reset | A domain | K kernel | C comps", True, _SUBTEXT_COLOR)
-    solver_line = small_font.render("S solve | L load exact | M compare", True, _SUBTEXT_COLOR)
+    solver_line = small_font.render("Show Solution button | S solve | M compare", True, _SUBTEXT_COLOR)
     surface.blit(phase_line, (left, top))
     top += phase_line.get_height() + 4
     surface.blit(note_line, (left, top))
@@ -493,6 +519,15 @@ def _draw_sidebar(
     top += reset_line.get_height() + 4
     surface.blit(solver_line, (left, top))
     top += solver_line.get_height() + 18
+
+    button_rect = show_solution_button_rect(layout, title_font, body_font, small_font)
+    _draw_show_solution_button(
+        surface,
+        button_rect,
+        body_font,
+        debug_view.show_solution_button_hovered,
+    )
+    top = button_rect.bottom + 18
 
     selected_title = body_font.render("Selected Center", True, _TEXT_COLOR)
     surface.blit(selected_title, (left, top))
@@ -556,14 +591,41 @@ def _draw_sidebar(
         top += 22
 
     top += 10
-    solver_title = body_font.render("Exact-Flow Solver", True, _TEXT_COLOR)
+    solver_title = body_font.render("Solver Session", True, _TEXT_COLOR)
     surface.blit(solver_title, (left, top))
     top += solver_title.get_height() + 8
 
     status_color = _VALIDATION_OK_COLOR if debug_view.solver_success else _SUBTEXT_COLOR
-    status_line = small_font.render(debug_view.solver_status_label, True, status_color)
+    status_line = small_font.render(
+        f"Status: {debug_view.solver_status_label.replace('_', ' ').title()}",
+        True,
+        status_color,
+    )
     surface.blit(status_line, (left, top))
     top += status_line.get_height() + 6
+
+    session_rows = (
+        ("Requested", debug_view.solver_result_requested),
+        ("Cached", debug_view.solver_cached),
+        ("Solution Visible", debug_view.solution_visible),
+        ("Loaded Into Board", debug_view.solution_loaded_into_board),
+    )
+    for label, is_on in session_rows:
+        _draw_toggle_row(surface, small_font, left, top, label, is_on)
+        top += 22
+
+    board_source_line = small_font.render(
+        f"Board Source: {debug_view.board_source_label.title()}",
+        True,
+        _TEXT_COLOR,
+    )
+    surface.blit(board_source_line, (left, top))
+    top += board_source_line.get_height() + 8
+
+    for line in _wrap_text(debug_view.solver_message, 34):
+        message_line = small_font.render(line, True, _SUBTEXT_COLOR)
+        surface.blit(message_line, (left, top))
+        top += message_line.get_height() + 4
 
     if debug_view.show_admissible_domain and debug_view.admissible_center_id is None:
         domain_hint = small_font.render("Domain overlay waits for a selected center.", True, _DOMAIN_LABEL_COLOR)
@@ -664,3 +726,36 @@ def _draw_toggle_row(
     pygame.draw.circle(surface, color, (left + 7, top + 9), 5)
     text = font.render(f"{label}: {status}", True, _TEXT_COLOR)
     surface.blit(text, (left + 20, top))
+
+
+def _draw_show_solution_button(
+    surface: pygame.Surface,
+    rect: pygame.Rect,
+    font: pygame.font.Font,
+    is_hovered: bool,
+) -> None:
+    color = _BUTTON_HOVER_COLOR if is_hovered else _BUTTON_COLOR
+    pygame.draw.rect(surface, color, rect, border_radius=8)
+    pygame.draw.rect(surface, _CENTER_OUTLINE_COLOR, rect, width=2, border_radius=8)
+    label = font.render("Show Solution", True, _BUTTON_TEXT_COLOR)
+    label_x = rect.centerx - (label.get_width() // 2)
+    label_y = rect.centery - (label.get_height() // 2)
+    surface.blit(label, (label_x, label_y))
+
+
+def _wrap_text(text: str, max_chars: int) -> tuple[str, ...]:
+    words = text.split()
+    if not words:
+        return ("",)
+
+    lines: list[str] = []
+    current_line = words[0]
+    for word in words[1:]:
+        candidate = f"{current_line} {word}"
+        if len(candidate) <= max_chars:
+            current_line = candidate
+            continue
+        lines.append(current_line)
+        current_line = word
+    lines.append(current_line)
+    return tuple(lines)
