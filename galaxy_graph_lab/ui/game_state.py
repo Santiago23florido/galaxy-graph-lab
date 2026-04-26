@@ -4,7 +4,7 @@ from collections.abc import Mapping
 from dataclasses import dataclass, field
 from types import MappingProxyType
 
-from ..core import Cell
+from ..core import Cell, GalaxyAssignment
 from .renderer import GeometryHit
 
 
@@ -48,6 +48,12 @@ class EditablePuzzleState:
                 for center_id, cells in cells_by_center.items()
             }
         )
+
+    def load_solver_assignment(self, assignment: GalaxyAssignment) -> None:
+        """Replace the tentative board state with one solver-produced assignment."""
+
+        self._assigned_center_by_cell = dict(assignment.assigned_center_by_cell)
+        self.last_hit = None
 
     def replace_assignments(self, assigned_center_by_cell: Mapping[Cell, str]) -> None:
         self._assigned_center_by_cell = dict(assigned_center_by_cell)

@@ -5,6 +5,7 @@ from .debug_tools import DebugOverlayState
 from .game_state import EditablePuzzleState
 from .puzzle_loader import FixedPuzzle, load_phase_a_puzzle
 from .renderer import DebugOverlayView, GeometryHit, cell_at_pixel, center_at_pixel, hit_test_board_geometry
+from .solver_session import SolverSessionState
 
 __all__ = [
     "DebugOverlayState",
@@ -12,6 +13,7 @@ __all__ = [
     "EditablePuzzleState",
     "FixedPuzzle",
     "GeometryHit",
+    "SolverSessionState",
     "cell_at_pixel",
     "center_at_pixel",
     "hit_test_board_geometry",

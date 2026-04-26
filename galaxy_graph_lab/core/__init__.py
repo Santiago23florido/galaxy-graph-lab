@@ -24,6 +24,16 @@ from .milp import (
     solve_flow_model,
 )
 from .model_data import PuzzleData
+from .solver_service import (
+    DEFAULT_SOLVER_BACKEND,
+    PuzzleSolveResult,
+    SOLVER_STATUS_BACKEND_UNAVAILABLE,
+    SOLVER_STATUS_ERROR,
+    SOLVER_STATUS_INFEASIBLE,
+    SOLVER_STATUS_SOLVED,
+    SOLVER_STATUS_UNSUPPORTED_BACKEND,
+    solve_puzzle,
+)
 from .validators import (
     AssignmentValidationResult,
     CandidateAssignment,
@@ -42,12 +52,19 @@ __all__ = [
     "GridEdge",
     "GridGraph",
     "PuzzleData",
+    "DEFAULT_SOLVER_BACKEND",
     "BaseMilpModel",
     "BaseMilpSolveResult",
     "DirectedFlowKey",
     "FlowMilpModel",
     "FlowMilpSolveResult",
     "GalaxyAssignment",
+    "PuzzleSolveResult",
+    "SOLVER_STATUS_BACKEND_UNAVAILABLE",
+    "SOLVER_STATUS_ERROR",
+    "SOLVER_STATUS_INFEASIBLE",
+    "SOLVER_STATUS_SOLVED",
+    "SOLVER_STATUS_UNSUPPORTED_BACKEND",
     "SourceFlowKey",
     "AssignmentValidationResult",
     "CandidateAssignment",
@@ -64,6 +81,7 @@ __all__ = [
     "twin_cell",
     "twin_map",
     "validate_assignment",
+    "solve_puzzle",
     "solve_base_model",
     "solve_flow_model",
 ]

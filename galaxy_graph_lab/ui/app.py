@@ -13,7 +13,51 @@ from .debug_tools import (
 )
 from .game_state import EditablePuzzleState
 from .puzzle_loader import load_phase_a_puzzle
-from .renderer import DebugOverlayView, build_board_layout, draw_phase_a_scene, hit_test_board_geometry
+from .renderer import (
+    DebugOverlayView,
+    build_board_layout,
+    draw_phase_a_scene,
+    hit_test_board_geometry,
+    restore_manual_button_rect,
+    show_solution_button_rect,
+)
+from .solver_session import SolverSessionState
+
+
+def request_solution_for_current_board(
+    puzzle_data,
+    game_state: EditablePuzzleState,
+    solver_session: SolverSessionState,
+) -> bool:
+    """Request one solver solution guided by the current player assignment."""
+
+    previous_assignment = dict(game_state.assigned_center_by_cell)
+    result = solver_session.request_solution(
+        puzzle_data,
+        preferred_assignment_by_cell=previous_assignment,
+    )
+    if not result.success or result.assignment is None:
+        return False
+
+    solver_session.capture_manual_snapshot(previous_assignment)
+    game_state.load_solver_assignment(result.assignment)
+    solver_session.mark_solution_loaded()
+    return True
+
+
+def restore_manual_board_state(
+    game_state: EditablePuzzleState,
+    solver_session: SolverSessionState,
+) -> bool:
+    """Restore the last saved manual snapshot into the editable board."""
+
+    restored_assignment = solver_session.restore_manual_snapshot()
+    if restored_assignment is None:
+        return False
+
+    game_state.replace_assignments(restored_assignment)
+    game_state.last_hit = None
+    return True
 
 
 def run_phase_f_app(max_frames: int | None = None) -> None:
@@ -35,14 +79,36 @@ def run_phase_f_app(max_frames: int | None = None) -> None:
         running = True
         frame_count = 0
         hovered_hit = None
+        hovered_show_solution_button = False
+        hovered_restore_manual_button = False
         game_state = EditablePuzzleState.from_center_ids(
             tuple(center.id for center in puzzle.puzzle_data.centers)
         )
         debug_state = DebugOverlayState()
+        solver_session = SolverSessionState()
         validation_result = validate_assignment(
             puzzle.puzzle_data,
             game_state.candidate_assignment(),
         )
+
+        def refresh_validation() -> None:
+            nonlocal validation_result
+            validation_result = validate_assignment(
+                puzzle.puzzle_data,
+                game_state.candidate_assignment(),
+            )
+
+        def request_and_show_solution() -> None:
+            if request_solution_for_current_board(
+                puzzle.puzzle_data,
+                game_state,
+                solver_session,
+            ):
+                refresh_validation()
+
+        def restore_manual_snapshot() -> None:
+            if restore_manual_board_state(game_state, solver_session):
+                refresh_validation()
 
         while running:
             for event in pygame.event.get():
@@ -52,10 +118,11 @@ def run_phase_f_app(max_frames: int | None = None) -> None:
                     running = False
                 elif event.type == pygame.KEYDOWN and event.key == pygame.K_r:
                     game_state.reset_assignments()
-                    validation_result = validate_assignment(
-                        puzzle.puzzle_data,
-                        game_state.candidate_assignment(),
-                    )
+                    solver_session.mark_player_controlled()
+                    solver_session.discard_manual_snapshot()
+                    refresh_validation()
+                elif event.type == pygame.KEYDOWN and event.key == pygame.K_h:
+                    restore_manual_snapshot()
                 elif event.type == pygame.KEYDOWN and event.key == pygame.K_a:
                     debug_state.show_admissible_domain = not debug_state.show_admissible_domain
                 elif event.type == pygame.KEYDOWN and event.key == pygame.K_k:
@@ -63,38 +130,58 @@ def run_phase_f_app(max_frames: int | None = None) -> None:
                 elif event.type == pygame.KEYDOWN and event.key == pygame.K_c:
                     debug_state.show_components = not debug_state.show_components
                 elif event.type == pygame.KEYDOWN and event.key == pygame.K_s:
-                    debug_state.ensure_exact_flow_result(puzzle.puzzle_data)
-                elif event.type == pygame.KEYDOWN and event.key == pygame.K_l:
-                    exact_result = debug_state.ensure_exact_flow_result(puzzle.puzzle_data)
-                    if exact_result.assignment is not None:
-                        game_state.replace_assignments(exact_result.assignment.assigned_center_by_cell)
-                        validation_result = validate_assignment(
-                            puzzle.puzzle_data,
-                            game_state.candidate_assignment(),
-                        )
+                    request_and_show_solution()
                 elif event.type == pygame.KEYDOWN and event.key == pygame.K_m:
-                    exact_result = debug_state.ensure_exact_flow_result(puzzle.puzzle_data)
-                    if exact_result.assignment is not None:
+                    if solver_session.solver_assignment_by_cell() is not None:
                         debug_state.show_solver_comparison = (
                             not debug_state.show_solver_comparison
                         )
                 elif event.type == pygame.MOUSEMOTION:
+                    hovered_show_solution_button = show_solution_button_rect(
+                        layout,
+                        title_font,
+                        body_font,
+                        small_font,
+                    ).collidepoint(event.pos)
+                    hovered_restore_manual_button = restore_manual_button_rect(
+                        layout,
+                        title_font,
+                        body_font,
+                        small_font,
+                    ).collidepoint(event.pos)
                     hovered_hit = hit_test_board_geometry(
                         puzzle.puzzle_data,
                         layout,
                         event.pos,
                     )
                 elif event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
+                    if show_solution_button_rect(
+                        layout,
+                        title_font,
+                        body_font,
+                        small_font,
+                    ).collidepoint(event.pos):
+                        request_and_show_solution()
+                        continue
+                    if restore_manual_button_rect(
+                        layout,
+                        title_font,
+                        body_font,
+                        small_font,
+                    ).collidepoint(event.pos):
+                        restore_manual_snapshot()
+                        continue
+
+                    previous_assignment = dict(game_state.assigned_center_by_cell)
                     clicked_hit = hit_test_board_geometry(
                         puzzle.puzzle_data,
                         layout,
                         event.pos,
                     )
                     game_state.apply_left_click(clicked_hit)
-                    validation_result = validate_assignment(
-                        puzzle.puzzle_data,
-                        game_state.candidate_assignment(),
-                    )
+                    if dict(game_state.assigned_center_by_cell) != previous_assignment:
+                        solver_session.mark_manual_edit()
+                    refresh_validation()
 
             candidate_assignment = game_state.candidate_assignment()
             selected_center_id = game_state.selected_center_id
@@ -113,22 +200,20 @@ def run_phase_f_app(max_frames: int | None = None) -> None:
                     candidate_assignment[selected_center_id],
                 )
 
-            solver_result = debug_state.exact_flow_result
-            solver_cached = solver_result is not None
+            solver_result = solver_session.solver_result
+            solver_cached = solver_session.solver_result_cached
             solver_success = bool(solver_result.success) if solver_result is not None else False
-            solver_status_label = "Exact flow not loaded."
-            if solver_result is not None and solver_result.success:
-                solver_status_label = "Exact flow cached and feasible."
-            elif solver_result is not None:
-                solver_status_label = f"Exact flow unavailable: {solver_result.status}"
 
             comparison_lookup = MappingProxyType({})
             comparison_match_count = None
             comparison_mismatch_count = None
-            exact_assignment_by_cell = debug_state.exact_assignment_by_cell()
+            exact_assignment_by_cell = solver_session.solver_assignment_by_cell()
             if debug_state.show_solver_comparison and exact_assignment_by_cell is not None:
-                comparison_lookup = comparison_by_cell(
+                comparison_reference = solver_session.comparison_reference_assignment_by_cell(
                     game_state.assigned_center_by_cell,
+                )
+                comparison_lookup = comparison_by_cell(
+                    comparison_reference,
                     exact_assignment_by_cell,
                 )
                 (
@@ -145,9 +230,17 @@ def run_phase_f_app(max_frames: int | None = None) -> None:
                 admissible_cells=tuple(admissible_cells),
                 kernel_cells_by_center=kernel_cells_by_center,
                 component_index_by_cell=component_lookup,
+                solver_result_requested=solver_session.solver_result_requested,
                 solver_cached=solver_cached,
                 solver_success=solver_success,
-                solver_status_label=solver_status_label,
+                solver_status_label=solver_session.solver_status_label,
+                solver_message=solver_session.solver_message,
+                solution_visible=solver_session.solution_visible,
+                solution_loaded_into_board=solver_session.solution_loaded_into_board,
+                board_mode_label=solver_session.board_mode_label,
+                show_solution_button_hovered=hovered_show_solution_button,
+                restore_manual_button_hovered=hovered_restore_manual_button,
+                can_restore_manual_snapshot=solver_session.can_restore_manual_snapshot,
                 comparison_by_cell=comparison_lookup,
                 comparison_match_count=comparison_match_count,
                 comparison_mismatch_count=comparison_mismatch_count,

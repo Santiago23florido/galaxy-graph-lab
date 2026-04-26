@@ -27,3 +27,4 @@ __pycache__/
 # Local project notes inside galaxy_graph_lab
 galaxy_graph_lab/core/IMPLEMENTATION_NOTES.md
 galaxy_graph_lab/PYGAME_MVP_PHASES.md
+galaxy_graph_lab/PUZZLE_LIBRARY_PHASES.md

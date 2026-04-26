@@ -4,28 +4,17 @@ from collections.abc import Iterable, Mapping
 from dataclasses import dataclass
 from types import MappingProxyType
 
-from ..core import Cell, FlowMilpSolveResult, PuzzleData, solve_flow_model
+from ..core import Cell, PuzzleData
 
 
 @dataclass(slots=True)
 class DebugOverlayState:
-    """Mutable debug toggles and cached exact-flow solver result."""
+    """Mutable debug toggles for optional developer overlays."""
 
     show_admissible_domain: bool = False
     show_kernel_cells: bool = False
     show_components: bool = False
     show_solver_comparison: bool = False
-    exact_flow_result: FlowMilpSolveResult | None = None
-
-    def ensure_exact_flow_result(self, puzzle_data: PuzzleData) -> FlowMilpSolveResult:
-        if self.exact_flow_result is None:
-            self.exact_flow_result = solve_flow_model(puzzle_data)
-        return self.exact_flow_result
-
-    def exact_assignment_by_cell(self) -> Mapping[Cell, str] | None:
-        if self.exact_flow_result is None or self.exact_flow_result.assignment is None:
-            return None
-        return self.exact_flow_result.assignment.assigned_center_by_cell
 
 
 def component_index_by_cell(
@@ -49,12 +38,17 @@ def component_index_by_cell(
 def comparison_by_cell(
     current_assignment_by_cell: Mapping[Cell, str],
     exact_assignment_by_cell: Mapping[Cell, str],
+    *,
+    cells_to_compare: Iterable[Cell] | None = None,
 ) -> Mapping[Cell, bool]:
-    all_cells = set(current_assignment_by_cell).union(exact_assignment_by_cell)
+    if cells_to_compare is None:
+        cells = tuple(current_assignment_by_cell)
+    else:
+        cells = tuple(cells_to_compare)
     return MappingProxyType(
         {
             cell: current_assignment_by_cell.get(cell) == exact_assignment_by_cell.get(cell)
-            for cell in all_cells
+            for cell in cells
         }
     )
 
