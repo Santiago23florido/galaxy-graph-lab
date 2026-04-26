@@ -1,27 +1,22 @@
-"""Smoke entrypoint for verifying the initial project setup."""
+"""Pygame entrypoint for the first playable Galaxy MVP phase."""
 
 from __future__ import annotations
 
 import sys
+from pathlib import Path
 
-import pygame
 
-
-def build_status_report() -> str:
-    """Return a short setup report for the local environment."""
-    return "\n".join(
-        [
-            "Galaxy Graph Lab setup check",
-            f"Python: {sys.version.split()[0]}",
-            f"Pygame: {pygame.version.ver}",
-            "Status: environment is ready.",
-        ]
-    )
+if __package__ in {None, ""}:
+    sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+    from galaxy_graph_lab.ui.app import run_phase_a_app
+else:
+    from .ui.app import run_phase_a_app
 
 
 def main() -> None:
-    """Print the setup report."""
-    print(build_status_report())
+    """Launch the Phase A Pygame window with one fixed puzzle."""
+
+    run_phase_a_app()
 
 
 if __name__ == "__main__":
