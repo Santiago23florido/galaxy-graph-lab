@@ -23,3 +23,7 @@ __pycache__/
 *.out
 *.synctex.gz
 *.toc
+
+# Local project notes inside galaxy_graph_lab
+galaxy_graph_lab/core/IMPLEMENTATION_NOTES.md
+galaxy_graph_lab/PYGAME_MVP_PHASES.md

@@ -10,6 +10,8 @@ packages = [{ include = "galaxy_graph_lab" }]
 [tool.poetry.dependencies]
 python = ">=3.11,<4.0"
 pygame = "^2.6.1"
+numpy = "^2.2.5"
+scipy = "^1.15.3"
 
 [tool.poetry.group.dev.dependencies]
 pytest = "^8.0.0"
@@ -23,7 +25,7 @@ requires = ["poetry-core>=2.0.0,<3.0.0"]
 build-backend = "poetry.core.masonry.api"
 
 [tool.pytest.ini_options]
-testpaths = ["tests"]
+testpaths = ["tests", "galaxy_graph_lab/tests"]
 addopts = "-q"
 
 [tool.ruff]

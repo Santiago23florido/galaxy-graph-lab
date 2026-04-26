@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import unittest
 
-from core import BoardSpec, Cell, CenterSpec, GridGraph, PuzzleData
+from galaxy_graph_lab.core import BoardSpec, Cell, CenterSpec, GridGraph, PuzzleData
 
 
 class Phase2GraphTests(unittest.TestCase):

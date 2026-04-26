@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import unittest
 
-from core import (
+from galaxy_graph_lab.core import (
     BoardSpec,
     Cell,
     CenterSpec,
