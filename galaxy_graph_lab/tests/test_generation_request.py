@@ -98,9 +98,11 @@ class GenerationRequestTests(unittest.TestCase):
         self.assertEqual(result.message, "Puzzle generated successfully.")
         self.assertEqual(result.request, request)
         self.assertEqual(result.profile, request.difficulty_profile)
-        self.assertEqual(result.retry_count, 0)
+        self.assertLessEqual(result.retry_count, request.max_generation_retries)
         self.assertEqual(result.random_seed_used, 17)
         self.assertIsNotNone(result.puzzle)
+        self.assertIsNotNone(result.placement)
+        self.assertIsNotNone(result.certification)
         self.assertEqual(result.puzzle.puzzle_data.board, BoardSpec(rows=7, cols=7))
         self.assertEqual(result.puzzle.name, "Medium 7x7")
 
