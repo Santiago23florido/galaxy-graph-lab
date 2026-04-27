@@ -3,6 +3,10 @@ from __future__ import annotations
 from collections.abc import Mapping
 from dataclasses import dataclass
 
+import numpy as np
+from scipy.optimize import LinearConstraint
+from scipy.sparse import coo_array
+
 from .board import Cell
 from .milp import FlowMilpModel, GalaxyAssignment, solve_flow_model
 from .milp.base_model import _build_exact_constraint
@@ -71,12 +75,12 @@ def _normalize_exact_flow_failure_message(raw_message: str) -> tuple[str, str]:
 
 def _freeze_preferred_assignment(
     puzzle_data: PuzzleData,
-    preferred_assignment_by_cell: Mapping[Cell, str] | None,
+    assignment_by_cell: Mapping[Cell, str] | None,
 ) -> dict[Cell, str]:
-    if preferred_assignment_by_cell is None:
+    if assignment_by_cell is None:
         return {}
 
-    frozen_assignment = dict(preferred_assignment_by_cell)
+    frozen_assignment = dict(assignment_by_cell)
     known_center_ids = set(puzzle_data.center_by_id)
     for cell, center_id in frozen_assignment.items():
         if not puzzle_data.board.contains(cell):
@@ -101,13 +105,48 @@ def _required_assignment_constraint(
     return _build_exact_constraint(model.num_variables, rows)
 
 
+def _minimum_mismatch_constraint(
+    model: FlowMilpModel,
+    avoid_assignment_by_cell: Mapping[Cell, str],
+    minimum_mismatches: int,
+) -> LinearConstraint | None:
+    if minimum_mismatches <= 0:
+        return None
+    if minimum_mismatches > len(avoid_assignment_by_cell):
+        raise ValueError("minimum_mismatches cannot exceed the guided cell count.")
+
+    columns = [
+        model.assignment_variable_index(cell, center_id)
+        for cell, center_id in avoid_assignment_by_cell.items()
+    ]
+    matrix = coo_array(
+        (
+            np.ones(len(columns), dtype=float),
+            (
+                np.zeros(len(columns), dtype=int),
+                np.asarray(columns, dtype=int),
+            ),
+        ),
+        shape=(1, model.num_variables),
+    ).tocsc()
+    return LinearConstraint(
+        matrix,
+        -np.inf,
+        np.asarray([len(avoid_assignment_by_cell) - minimum_mismatches], dtype=float),
+    )
+
+
 def _preference_objective(
     model: FlowMilpModel,
     preferred_assignment_by_cell: Mapping[Cell, str],
+    avoid_assignment_by_cell: Mapping[Cell, str] | None = None,
 ) -> tuple[float, ...]:
     objective = [0.0] * model.num_variables
     for cell, center_id in preferred_assignment_by_cell.items():
         objective[model.assignment_variable_index(cell, center_id)] = -1.0
+    if avoid_assignment_by_cell is not None:
+        for cell, center_id in avoid_assignment_by_cell.items():
+            objective[model.assignment_variable_index(cell, center_id)] += 1.0
     return tuple(objective)
 
 
@@ -130,6 +169,8 @@ def solve_puzzle(
     backend: str = DEFAULT_SOLVER_BACKEND,
     options: Mapping[str, object] | None = None,
     preferred_assignment_by_cell: Mapping[Cell, str] | None = None,
+    avoid_assignment_by_cell: Mapping[Cell, str] | None = None,
+    minimum_mismatches_against_avoid: int | None = None,
 ) -> PuzzleSolveResult:
     """Solve one puzzle instance through the current canonical exact backend."""
 
@@ -146,9 +187,13 @@ def solve_puzzle(
             puzzle_data,
             preferred_assignment_by_cell,
         )
-        if not preferred_assignment:
+        avoid_assignment = _freeze_preferred_assignment(
+            puzzle_data,
+            avoid_assignment_by_cell,
+        )
+        if not preferred_assignment and not avoid_assignment:
             exact_flow_result = solve_flow_model(puzzle_data, options=options)
-        else:
+        elif preferred_assignment and not avoid_assignment:
             model = FlowMilpModel.from_puzzle_data(puzzle_data)
             required_constraint = _required_assignment_constraint(model, preferred_assignment)
             exact_flow_result = model.solve(
@@ -156,6 +201,26 @@ def solve_puzzle(
                 extra_constraints=()
                 if required_constraint is None
                 else (required_constraint,),
+            )
+        else:
+            model = FlowMilpModel.from_puzzle_data(puzzle_data)
+            mismatch_constraint = None
+            if minimum_mismatches_against_avoid is not None:
+                mismatch_constraint = _minimum_mismatch_constraint(
+                    model,
+                    avoid_assignment,
+                    minimum_mismatches_against_avoid,
+                )
+            exact_flow_result = model.solve(
+                options=options,
+                objective=_preference_objective(
+                    model,
+                    preferred_assignment,
+                    avoid_assignment,
+                ),
+                extra_constraints=()
+                if mismatch_constraint is None
+                else (mismatch_constraint,),
             )
     except ModuleNotFoundError as exc:
         return _solver_failure(
@@ -187,7 +252,11 @@ def solve_puzzle(
             preferred_assignment,
         )
         mismatch_count = None
-        if preferred_assignment:
+        if preferred_assignment and avoid_assignment:
+            success_message = "Solution found and it follows the requested shape guidance."
+            solution_mode = "guided_shape"
+            mismatch_count = len(preferred_assignment) - int(matched_preference_count or 0)
+        elif preferred_assignment:
             success_message = "Solution found and it keeps all current selections."
             solution_mode = "guided_exact"
             mismatch_count = 0
@@ -210,7 +279,7 @@ def solve_puzzle(
     status_label, message = _normalize_exact_flow_failure_message(
         exact_flow_result.message
     )
-    if preferred_assignment and status_label == SOLVER_STATUS_INFEASIBLE:
+    if preferred_assignment and not avoid_assignment and status_label == SOLVER_STATUS_INFEASIBLE:
         try:
             model = FlowMilpModel.from_puzzle_data(puzzle_data)
             fallback_result = model.solve(
