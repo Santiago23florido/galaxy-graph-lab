@@ -87,7 +87,7 @@ class GenerationRequestTests(unittest.TestCase):
             difficulty=GENERATION_DIFFICULTY_MEDIUM,
             grid_size=BoardSpec(rows=7, cols=7),
             random_seed=17,
-            max_generation_retries=9,
+            max_generation_retries=64,
         )
 
         result = generate_puzzle(request)
@@ -103,8 +103,17 @@ class GenerationRequestTests(unittest.TestCase):
         self.assertIsNotNone(result.puzzle)
         self.assertIsNotNone(result.placement)
         self.assertIsNotNone(result.certification)
+        self.assertIsNotNone(result.difficulty_calibration)
         self.assertEqual(result.puzzle.puzzle_data.board, BoardSpec(rows=7, cols=7))
         self.assertEqual(result.puzzle.name, "Medium 7x7")
+        self.assertEqual(
+            result.difficulty_calibration.measured_difficulty,
+            GENERATION_DIFFICULTY_MEDIUM,
+        )
+        self.assertGreaterEqual(
+            result.difficulty_calibration.non_rectangular_region_count,
+            result.profile.min_non_rectangular_regions,
+        )
 
     def test_generated_puzzle_is_immediately_compatible_with_the_solver_stack(self) -> None:
         request = PuzzleGenerationRequest(
@@ -123,6 +132,14 @@ class GenerationRequestTests(unittest.TestCase):
             solve_result.assignment.cells_by_center,
         )
         self.assertTrue(validation_result.is_valid)
+
+    def test_profiles_enforce_the_new_medium_and_hard_center_ranges(self) -> None:
+        medium_profile = difficulty_profile_for(GENERATION_DIFFICULTY_MEDIUM)
+        hard_profile = difficulty_profile_for(GENERATION_DIFFICULTY_HARD)
+
+        self.assertEqual(medium_profile.min_center_count, 6)
+        self.assertEqual(medium_profile.max_center_count, 10)
+        self.assertEqual(hard_profile.min_center_count, 10)
 
 
 if __name__ == "__main__":

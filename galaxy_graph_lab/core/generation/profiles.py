@@ -76,7 +76,9 @@ class DifficultyProfile:
     max_center_count: int
     center_type_mix: CenterTypeMix
     overlap_target_range: OverlapTargetRange
+    irregularity_target_range: OverlapTargetRange
     uniqueness_required: bool
+    min_non_rectangular_regions: int
 
     def __post_init__(self) -> None:
         if self.difficulty not in GENERATION_DIFFICULTIES:
@@ -94,6 +96,10 @@ class DifficultyProfile:
             raise ValueError("min_center_count must be positive.")
         if self.min_center_count > self.max_center_count:
             raise ValueError("min_center_count must not exceed max_center_count.")
+        if not _is_plain_int(self.min_non_rectangular_regions):
+            raise TypeError("min_non_rectangular_regions must be an integer.")
+        if self.min_non_rectangular_regions < 0:
+            raise ValueError("min_non_rectangular_regions must be non-negative.")
 
 
 _GENERATION_DIFFICULTY_PROFILES = MappingProxyType(
@@ -104,15 +110,17 @@ _GENERATION_DIFFICULTY_PROFILES = MappingProxyType(
                 BoardSpec(rows=5, cols=5),
                 BoardSpec(rows=7, cols=7),
             ),
-            min_center_count=1,
-            max_center_count=4,
+            min_center_count=2,
+            max_center_count=5,
             center_type_mix=CenterTypeMix(
                 cell_weight=0.7,
                 edge_weight=0.25,
                 vertex_weight=0.05,
             ),
-            overlap_target_range=OverlapTargetRange(0.10, 0.25),
+            overlap_target_range=OverlapTargetRange(0.00, 0.25),
+            irregularity_target_range=OverlapTargetRange(0.00, 0.10),
             uniqueness_required=True,
+            min_non_rectangular_regions=0,
         ),
         GENERATION_DIFFICULTY_MEDIUM: DifficultyProfile(
             difficulty=GENERATION_DIFFICULTY_MEDIUM,
@@ -121,15 +129,17 @@ _GENERATION_DIFFICULTY_PROFILES = MappingProxyType(
                 BoardSpec(rows=7, cols=7),
                 BoardSpec(rows=9, cols=9),
             ),
-            min_center_count=1,
-            max_center_count=6,
+            min_center_count=6,
+            max_center_count=10,
             center_type_mix=CenterTypeMix(
                 cell_weight=0.45,
                 edge_weight=0.4,
                 vertex_weight=0.15,
             ),
             overlap_target_range=OverlapTargetRange(0.20, 0.45),
+            irregularity_target_range=OverlapTargetRange(0.08, 0.22),
             uniqueness_required=True,
+            min_non_rectangular_regions=1,
         ),
         GENERATION_DIFFICULTY_HARD: DifficultyProfile(
             difficulty=GENERATION_DIFFICULTY_HARD,
@@ -137,15 +147,17 @@ _GENERATION_DIFFICULTY_PROFILES = MappingProxyType(
                 BoardSpec(rows=7, cols=7),
                 BoardSpec(rows=9, cols=9),
             ),
-            min_center_count=1,
-            max_center_count=8,
+            min_center_count=10,
+            max_center_count=16,
             center_type_mix=CenterTypeMix(
                 cell_weight=0.25,
                 edge_weight=0.45,
                 vertex_weight=0.30,
             ),
             overlap_target_range=OverlapTargetRange(0.35, 0.65),
+            irregularity_target_range=OverlapTargetRange(0.20, 0.45),
             uniqueness_required=True,
+            min_non_rectangular_regions=2,
         ),
     }
 )

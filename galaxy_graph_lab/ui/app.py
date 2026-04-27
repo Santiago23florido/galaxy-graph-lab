@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import secrets
 from types import MappingProxyType
 
 import pygame
@@ -31,6 +32,15 @@ from .start_screen import (
     draw_start_screen,
     hit_test_start_screen,
 )
+
+_UI_GENERATION_RETRIES_PER_SEED = 64
+_UI_GENERATION_SEED_SWEEP = 24
+
+
+def _random_generation_base_seed() -> int:
+    """Return one fresh base seed for a new UI generation request."""
+
+    return secrets.randbelow(2**31)
 
 
 def request_solution_for_current_board(
@@ -71,20 +81,38 @@ def restore_manual_board_state(
 
 def build_generated_ui_puzzle(
     start_screen_state: StartScreenState,
+    *,
+    base_seed: int | None = None,
 ) -> tuple[FixedPuzzle | None, str]:
     """Generate one UI puzzle from the current start-screen selection."""
 
-    generation_request = build_generation_request_from_state(start_screen_state)
-    generation_result = generate_puzzle(generation_request)
-    if not generation_result.success or generation_result.puzzle is None:
-        return None, generation_result.message
+    if base_seed is None:
+        base_seed = _random_generation_base_seed()
+
+    for seed_offset in range(_UI_GENERATION_SEED_SWEEP):
+        generation_request = build_generation_request_from_state(
+            start_screen_state,
+            random_seed=base_seed + seed_offset,
+            max_generation_retries=_UI_GENERATION_RETRIES_PER_SEED,
+        )
+        generation_result = generate_puzzle(generation_request)
+        if not generation_result.success or generation_result.puzzle is None:
+            continue
+
+        return (
+            FixedPuzzle(
+                name=generation_result.puzzle.name,
+                puzzle_data=generation_result.puzzle.puzzle_data,
+            ),
+            generation_result.message,
+        )
 
     return (
-        FixedPuzzle(
-            name=generation_result.puzzle.name,
-            puzzle_data=generation_result.puzzle.puzzle_data,
+        None,
+        (
+            "Could not generate a certified puzzle for the selected "
+            "difficulty and grid size after repeated attempts."
         ),
-        generation_result.message,
     )
 
 

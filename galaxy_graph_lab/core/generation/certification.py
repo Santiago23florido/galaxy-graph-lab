@@ -1,7 +1,9 @@
 from __future__ import annotations
 
+from collections.abc import Mapping
 from dataclasses import dataclass
 
+from ..board import Cell
 from ..model_data import PuzzleData
 from ..solver_service import PuzzleSolveResult, solve_puzzle
 from ..validators import AssignmentValidationResult, CandidateAssignment, validate_assignment
@@ -21,6 +23,10 @@ class PuzzleCertificationResult:
 def certify_generated_puzzle(
     puzzle_data: PuzzleData,
     constructive_assignment: CandidateAssignment,
+    *,
+    preferred_assignment_by_cell: Mapping[Cell, str] | None = None,
+    avoid_assignment_by_cell: Mapping[Cell, str] | None = None,
+    minimum_mismatches_against_avoid: int | None = None,
 ) -> PuzzleCertificationResult:
     """Validate the constructive assignment and certify the puzzle with the solver."""
 
@@ -44,7 +50,12 @@ def certify_generated_puzzle(
             certified_validation=None,
         )
 
-    solve_result = solve_puzzle(puzzle_data)
+    solve_result = solve_puzzle(
+        puzzle_data,
+        preferred_assignment_by_cell=preferred_assignment_by_cell,
+        avoid_assignment_by_cell=avoid_assignment_by_cell,
+        minimum_mismatches_against_avoid=minimum_mismatches_against_avoid,
+    )
     if not solve_result.success or solve_result.assignment is None:
         return PuzzleCertificationResult(
             success=False,

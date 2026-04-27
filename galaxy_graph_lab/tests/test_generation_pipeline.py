@@ -92,7 +92,7 @@ class GenerationPipelineTests(unittest.TestCase):
             difficulty=GENERATION_DIFFICULTY_MEDIUM,
             grid_size=BoardSpec(rows=7, cols=7),
             random_seed=19,
-            max_generation_retries=4,
+            max_generation_retries=64,
         )
 
         result = generate_puzzle(request)
@@ -100,10 +100,16 @@ class GenerationPipelineTests(unittest.TestCase):
         self.assertTrue(result.success)
         self.assertIsNotNone(result.placement)
         self.assertIsNotNone(result.certification)
+        self.assertIsNotNone(result.difficulty_calibration)
         self.assertIsNotNone(result.puzzle)
         self.assertGreaterEqual(len(result.placement.regions), result.profile.min_center_count)
         self.assertLessEqual(len(result.placement.regions), result.profile.max_center_count)
         self.assertTrue(result.certification.success)
+        self.assertTrue(result.difficulty_calibration.profile_match)
+        self.assertGreaterEqual(
+            result.difficulty_calibration.non_rectangular_region_count,
+            result.profile.min_non_rectangular_regions,
+        )
 
         constructive_validation = validate_assignment(
             result.puzzle.puzzle_data,

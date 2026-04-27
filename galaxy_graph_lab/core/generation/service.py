@@ -10,7 +10,9 @@ from ..milp import GalaxyAssignment
 from ..model_data import PuzzleData
 from .certification import PuzzleCertificationResult, certify_generated_puzzle
 from .center_placement import CenterPlacementResult, place_candidate_centers
+from .difficulty import DifficultyCalibration, calibrate_generated_puzzle_difficulty
 from .partition_closure import close_candidate_partition
+from .preference_shaping import build_preferred_assignment_by_cell
 from .profiles import DifficultyProfile
 from .region_growth import grow_candidate_regions
 from .request import PuzzleGenerationRequest
@@ -46,6 +48,7 @@ class PuzzleGenerationResult:
     random_seed_used: int | None
     placement: CenterPlacementResult | None
     certification: PuzzleCertificationResult | None
+    difficulty_calibration: DifficultyCalibration | None
 
 
 def _build_generated_puzzle(
@@ -80,10 +83,16 @@ def _generate_one_attempt(
     request: PuzzleGenerationRequest,
     profile: DifficultyProfile,
     rng: Random,
-) -> tuple[GeneratedPuzzle | None, CenterPlacementResult | None, PuzzleCertificationResult | None, str]:
+) -> tuple[
+    GeneratedPuzzle | None,
+    CenterPlacementResult | None,
+    PuzzleCertificationResult | None,
+    DifficultyCalibration | None,
+    str,
+]:
     placement = place_candidate_centers(request.grid_size, profile, rng)
     if placement is None:
-        return None, None, None, "Could not place centers for the selected profile."
+        return None, None, None, None, "Could not place centers for the selected profile."
 
     grown_assignment = grow_candidate_regions(request.grid_size, placement.regions)
     closure = close_candidate_partition(
@@ -92,15 +101,48 @@ def _generate_one_attempt(
         grown_assignment,
     )
     if not closure.success or closure.cells_by_center is None:
-        return None, placement, None, closure.message
+        return None, placement, None, None, closure.message
 
     puzzle_data = PuzzleData.from_specs(request.grid_size, placement.centers)
+    solver_guidance = build_preferred_assignment_by_cell(
+        puzzle_data,
+        placement,
+        closure.cells_by_center,
+        profile,
+        rng,
+    )
     certification = certify_generated_puzzle(
         puzzle_data,
         closure.cells_by_center,
+        preferred_assignment_by_cell=solver_guidance.preferred_assignment_by_cell,
+        avoid_assignment_by_cell=solver_guidance.avoid_assignment_by_cell,
+        minimum_mismatches_against_avoid=(
+            0
+            if not solver_guidance.avoid_assignment_by_cell
+            else max(2, profile.min_non_rectangular_regions * 2)
+        ),
     )
     if not certification.success:
-        return None, placement, certification, certification.message
+        return None, placement, certification, None, certification.message
+
+    if certification.solve_result.assignment is None:
+        return None, placement, certification, None, "Solver did not return an assignment."
+
+    difficulty_calibration = calibrate_generated_puzzle_difficulty(
+        puzzle_data,
+        certification.solve_result.assignment,
+        placement.center_type_by_center,
+        certification.solve_result,
+        profile,
+    )
+    if not difficulty_calibration.profile_match:
+        return (
+            None,
+            placement,
+            certification,
+            difficulty_calibration,
+            difficulty_calibration.message,
+        )
 
     puzzle = _build_generated_puzzle(
         request,
@@ -108,7 +150,13 @@ def _generate_one_attempt(
         closure.cells_by_center,
         certification,
     )
-    return puzzle, placement, certification, certification.message
+    return (
+        puzzle,
+        placement,
+        certification,
+        difficulty_calibration,
+        certification.message,
+    )
 
 
 def generate_puzzle(request: PuzzleGenerationRequest) -> PuzzleGenerationResult:
@@ -119,10 +167,17 @@ def generate_puzzle(request: PuzzleGenerationRequest) -> PuzzleGenerationResult:
     last_message = "The generator did not attempt any candidate."
     last_placement: CenterPlacementResult | None = None
     last_certification: PuzzleCertificationResult | None = None
+    last_difficulty_calibration: DifficultyCalibration | None = None
 
     for attempt_index in range(request.max_generation_retries):
         try:
-            puzzle, placement, certification, message = _generate_one_attempt(
+            (
+                puzzle,
+                placement,
+                certification,
+                difficulty_calibration,
+                message,
+            ) = _generate_one_attempt(
                 request,
                 profile,
                 rng,
@@ -134,6 +189,7 @@ def generate_puzzle(request: PuzzleGenerationRequest) -> PuzzleGenerationResult:
         last_message = message
         last_placement = placement
         last_certification = certification
+        last_difficulty_calibration = difficulty_calibration
         if puzzle is None:
             continue
 
@@ -149,6 +205,7 @@ def generate_puzzle(request: PuzzleGenerationRequest) -> PuzzleGenerationResult:
             random_seed_used=request.random_seed,
             placement=placement,
             certification=certification,
+            difficulty_calibration=difficulty_calibration,
         )
 
     return PuzzleGenerationResult(
@@ -163,6 +220,7 @@ def generate_puzzle(request: PuzzleGenerationRequest) -> PuzzleGenerationResult:
         random_seed_used=request.random_seed,
         placement=last_placement,
         certification=last_certification,
+        difficulty_calibration=last_difficulty_calibration,
     )
 
 

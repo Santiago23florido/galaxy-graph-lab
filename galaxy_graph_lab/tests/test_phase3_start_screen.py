@@ -102,7 +102,7 @@ class Phase3StartScreenTests(unittest.TestCase):
         state = default_start_screen_state()
         state.select_grid_size(BoardSpec(rows=7, cols=7))
 
-        puzzle, message = build_generated_ui_puzzle(state)
+        puzzle, message = build_generated_ui_puzzle(state, base_seed=0)
 
         self.assertIsNotNone(puzzle)
         self.assertEqual(message, "Puzzle generated successfully.")
