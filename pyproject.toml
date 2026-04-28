@@ -19,6 +19,7 @@ ruff = "^0.8.0"
 
 [tool.poetry.scripts]
 galaxy-graph-lab = "galaxy_graph_lab.main:main"
+galaxy-graph-lab-dataset = "galaxy_graph_lab.dataset_cli:main"
 
 [build-system]
 requires = ["poetry-core>=2.0.0,<3.0.0"]
