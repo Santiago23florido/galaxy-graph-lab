@@ -1,0 +1,39 @@
+{
+  "average_solve_time_by_difficulty": {
+    "easy": 0.011043420832720585,
+    "hard": 0.029763050508336164,
+    "medium": 0.0211058683344163
+  },
+  "average_solve_time_by_difficulty_and_size": {
+    "easy": {
+      "5x5": 0.00759616067322592,
+      "7x7": 0.014490680992215252
+    },
+    "hard": {
+      "7x7": 0.025440738012548536,
+      "9x9": 0.03408536300412379
+    },
+    "medium": {
+      "5x5": 0.01043760500033386,
+      "7x7": 0.018446553498506546,
+      "9x9": 0.034433446504408494
+    }
+  },
+  "instance_count": 14,
+  "result_files": [
+    "galaxy_easy_5x5_001.txt",
+    "galaxy_easy_5x5_002.txt",
+    "galaxy_easy_5x5_003.txt",
+    "galaxy_easy_7x7_001.txt",
+    "galaxy_easy_7x7_002.txt",
+    "galaxy_easy_7x7_003.txt",
+    "galaxy_hard_7x7_001.txt",
+    "galaxy_hard_9x9_001.txt",
+    "galaxy_medium_5x5_001.txt",
+    "galaxy_medium_5x5_002.txt",
+    "galaxy_medium_7x7_001.txt",
+    "galaxy_medium_7x7_002.txt",
+    "galaxy_medium_9x9_001.txt",
+    "galaxy_medium_9x9_002.txt"
+  ]
+}
