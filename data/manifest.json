@@ -1,0 +1,43 @@
+{
+  "instance_files": [
+    "galaxy_easy_5x5_001.json",
+    "galaxy_easy_5x5_002.json",
+    "galaxy_easy_5x5_003.json",
+    "galaxy_easy_7x7_001.json",
+    "galaxy_easy_7x7_002.json",
+    "galaxy_easy_7x7_003.json",
+    "galaxy_medium_5x5_001.json",
+    "galaxy_medium_5x5_002.json",
+    "galaxy_medium_7x7_001.json",
+    "galaxy_medium_7x7_002.json",
+    "galaxy_medium_9x9_001.json",
+    "galaxy_medium_9x9_002.json",
+    "galaxy_hard_7x7_001.json",
+    "galaxy_hard_9x9_001.json"
+  ],
+  "instances_by_difficulty": {
+    "easy": 6,
+    "hard": 2,
+    "medium": 6
+  },
+  "instances_by_difficulty_and_size": {
+    "easy": {
+      "5x5": 3,
+      "7x7": 3
+    },
+    "hard": {
+      "7x7": 1,
+      "9x9": 1
+    },
+    "medium": {
+      "5x5": 2,
+      "7x7": 2,
+      "9x9": 2
+    }
+  },
+  "requested_instances_per_difficulty_per_size": {
+    "easy": 3,
+    "hard": 1,
+    "medium": 2
+  }
+}

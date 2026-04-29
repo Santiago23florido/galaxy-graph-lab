@@ -1,4 +1,4 @@
-"""Pygame entrypoint for the first playable Galaxy MVP phase."""
+"""Pygame entrypoint for the current playable Galaxy MVP."""
 
 from __future__ import annotations
 
@@ -24,13 +24,13 @@ def build_status_report() -> str:
             f"Python: {sys.version.split()[0]}",
             f"Pygame: {pygame.version.ver}",
             "Status: environment is ready.",
-            "UI Phase: F (developer-oriented debug features)",
+            "UI Phase: start screen + board scene",
         ]
     )
 
 
 def main() -> None:
-    """Launch the Phase F Pygame window with one fixed puzzle."""
+    """Launch the Pygame MVP with the start screen and board scene."""
 
     run_phase_f_app()
 
