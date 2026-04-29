@@ -30,7 +30,10 @@ from galaxy_graph_lab.ui.game_state import EditablePuzzleState
 from galaxy_graph_lab.ui.puzzle_loader import load_phase_a_puzzle
 from galaxy_graph_lab.ui.renderer import (
     build_board_layout,
+    info_panel_rect,
+    menu_button_rect,
     restore_manual_button_rect,
+    return_home_button_rect,
     show_solution_button_rect,
 )
 from galaxy_graph_lab.ui.solver_session import SolverSessionState
@@ -244,7 +247,7 @@ class PhaseFPygameUiTests(unittest.TestCase):
         self.assertEqual(solver_session.board_mode_label, "manual")
         self.assertFalse(solver_session.can_restore_manual_snapshot)
 
-    def test_solver_button_rects_stay_inside_sidebar(self) -> None:
+    def test_board_action_buttons_and_menu_stay_inside_window(self) -> None:
         with patch.dict(
             os.environ,
             {"SDL_VIDEODRIVER": "dummy", "SDL_AUDIODRIVER": "dummy"},
@@ -270,13 +273,22 @@ class PhaseFPygameUiTests(unittest.TestCase):
                     body_font,
                     small_font,
                 )
+                home_rect = return_home_button_rect(layout)
+                menu_rect = menu_button_rect(layout)
+                panel_rect = info_panel_rect(layout)
 
-                self.assertTrue(layout.sidebar_rect.contains(button_rect))
-                self.assertTrue(layout.sidebar_rect.contains(restore_rect))
+                window_rect = pygame.Rect(0, 0, layout.window_width, layout.window_height)
+                self.assertTrue(window_rect.contains(button_rect))
+                self.assertTrue(window_rect.contains(restore_rect))
+                self.assertTrue(window_rect.contains(home_rect))
+                self.assertTrue(window_rect.contains(menu_rect))
+                self.assertTrue(window_rect.contains(panel_rect))
                 self.assertGreater(button_rect.width, 0)
                 self.assertGreater(button_rect.height, 0)
                 self.assertGreater(restore_rect.width, 0)
                 self.assertGreater(restore_rect.height, 0)
+                self.assertGreater(home_rect.width, 0)
+                self.assertGreater(menu_rect.width, 0)
             finally:
                 pygame.quit()
 
