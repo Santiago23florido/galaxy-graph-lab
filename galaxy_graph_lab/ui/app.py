@@ -13,6 +13,15 @@ from .debug_tools import (
     component_index_by_cell,
 )
 from .game_state import EditablePuzzleState
+from .home_screen import (
+    apply_home_screen_hit,
+    build_home_screen_layout,
+    default_home_screen_state,
+    draw_detail_screen,
+    draw_home_screen,
+    hit_test_detail_screen,
+    hit_test_home_screen,
+)
 from .puzzle_loader import FixedPuzzle
 from .renderer import (
     DebugOverlayView,
@@ -35,12 +44,37 @@ from .start_screen import (
 
 _UI_GENERATION_RETRIES_PER_SEED = 64
 _UI_GENERATION_SEED_SWEEP = 24
+_WINDOW_FLAGS = pygame.RESIZABLE
+_WINDOW_RESIZED_EVENT = getattr(pygame, "WINDOWRESIZED", None)
 
 
 def _random_generation_base_seed() -> int:
     """Return one fresh base seed for a new UI generation request."""
 
     return secrets.randbelow(2**31)
+
+
+def _window_size_from_event(
+    event: pygame.event.Event,
+    surface: pygame.Surface,
+) -> tuple[int, int]:
+    """Return one resize target from any supported Pygame resize event."""
+
+    event_size = getattr(event, "size", None)
+    if isinstance(event_size, tuple) and len(event_size) == 2:
+        return int(event_size[0]), int(event_size[1])
+
+    for width_name, height_name in (("w", "h"), ("x", "y")):
+        width = getattr(event, width_name, None)
+        height = getattr(event, height_name, None)
+        if isinstance(width, int | float) and isinstance(height, int | float):
+            return int(width), int(height)
+
+    display_surface = pygame.display.get_surface()
+    if display_surface is not None:
+        return display_surface.get_size()
+
+    return surface.get_size()
 
 
 def request_solution_for_current_board(
@@ -117,25 +151,33 @@ def build_generated_ui_puzzle(
 
 
 def run_phase_f_app(max_frames: int | None = None) -> None:
-    """Open the Pygame MVP with a start screen and the current board scene."""
+    """Open the Pygame MVP with a home screen, selector, and board scene."""
 
     pygame.init()
 
     try:
-        start_screen_layout = build_start_screen_layout()
+        home_screen_layout = build_home_screen_layout()
+        start_screen_layout = build_start_screen_layout(
+            (home_screen_layout.window_width, home_screen_layout.window_height)
+        )
         surface = pygame.display.set_mode(
-            (start_screen_layout.window_width, start_screen_layout.window_height)
+            (home_screen_layout.window_width, home_screen_layout.window_height),
+            _WINDOW_FLAGS,
         )
         pygame.display.set_caption("Galaxy Graph Lab")
 
         clock = pygame.time.Clock()
+        hero_font = pygame.font.Font(None, 58)
         title_font = pygame.font.Font(None, 34)
         body_font = pygame.font.Font(None, 24)
         small_font = pygame.font.Font(None, 21)
 
         running = True
-        scene = "start"
+        scene = "home"
         frame_count = 0
+        home_screen_state = default_home_screen_state()
+        hovered_home_hit = None
+        hovered_detail_hit = None
         start_screen_state = default_start_screen_state()
         hovered_start_hit = None
 
@@ -148,6 +190,38 @@ def run_phase_f_app(max_frames: int | None = None) -> None:
         debug_state: DebugOverlayState | None = None
         solver_session: SolverSessionState | None = None
         validation_result = None
+
+        def resize_window(target_size: tuple[int, int]) -> None:
+            nonlocal home_screen_layout
+            nonlocal start_screen_layout
+            nonlocal layout
+            nonlocal surface
+
+            home_screen_layout = build_home_screen_layout(target_size)
+            start_screen_layout = build_start_screen_layout(target_size)
+
+            if scene == "board" and puzzle is not None:
+                layout = build_board_layout(
+                    puzzle.puzzle_data,
+                    window_size=target_size,
+                )
+                surface = pygame.display.set_mode(
+                    (layout.window_width, layout.window_height),
+                    _WINDOW_FLAGS,
+                )
+                return
+
+            if scene in {"home", "rules", "credits"}:
+                surface = pygame.display.set_mode(
+                    (home_screen_layout.window_width, home_screen_layout.window_height),
+                    _WINDOW_FLAGS,
+                )
+                return
+
+            surface = pygame.display.set_mode(
+                (start_screen_layout.window_width, start_screen_layout.window_height),
+                _WINDOW_FLAGS,
+            )
 
         def load_board_scene(next_puzzle: FixedPuzzle) -> None:
             nonlocal puzzle
@@ -163,8 +237,14 @@ def run_phase_f_app(max_frames: int | None = None) -> None:
             nonlocal validation_result
 
             puzzle = next_puzzle
-            layout = build_board_layout(puzzle.puzzle_data)
-            surface = pygame.display.set_mode((layout.window_width, layout.window_height))
+            layout = build_board_layout(
+                puzzle.puzzle_data,
+                window_size=surface.get_size(),
+            )
+            surface = pygame.display.set_mode(
+                (layout.window_width, layout.window_height),
+                _WINDOW_FLAGS,
+            )
             game_state = EditablePuzzleState.from_center_ids(
                 tuple(center.id for center in puzzle.puzzle_data.centers)
             )
@@ -178,6 +258,25 @@ def run_phase_f_app(max_frames: int | None = None) -> None:
             hovered_show_solution_button = False
             hovered_restore_manual_button = False
             scene = "board"
+
+        def load_selection_scene() -> None:
+            nonlocal scene
+            nonlocal hovered_start_hit
+
+            scene = "start"
+            resize_window(surface.get_size())
+            hovered_start_hit = None
+
+        def load_detail_scene(panel_kind: str) -> None:
+            nonlocal scene
+            nonlocal hovered_detail_hit
+
+            if panel_kind not in {"rules", "credits"}:
+                raise ValueError(f"Unknown detail scene: {panel_kind}")
+
+            scene = panel_kind
+            resize_window(surface.get_size())
+            hovered_detail_hit = None
 
         def refresh_validation() -> None:
             nonlocal validation_result
@@ -209,8 +308,43 @@ def run_phase_f_app(max_frames: int | None = None) -> None:
             for event in pygame.event.get():
                 if event.type == pygame.QUIT:
                     running = False
+                elif event.type == pygame.VIDEORESIZE or event.type == _WINDOW_RESIZED_EVENT:
+                    resize_window(_window_size_from_event(event, surface))
                 elif event.type == pygame.KEYDOWN and event.key == pygame.K_ESCAPE:
                     running = False
+                elif scene == "home":
+                    if event.type == pygame.MOUSEMOTION:
+                        hovered_home_hit = hit_test_home_screen(
+                            home_screen_layout,
+                            event.pos,
+                        )
+                    elif event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
+                        clicked_hit = hit_test_home_screen(
+                            home_screen_layout,
+                            event.pos,
+                        )
+                        if clicked_hit is not None and clicked_hit.kind == "start":
+                            load_selection_scene()
+                        else:
+                            apply_home_screen_hit(home_screen_state, clicked_hit)
+                            if clicked_hit is not None and clicked_hit.kind in {"rules", "credits"}:
+                                load_detail_scene(clicked_hit.kind)
+                elif scene in {"rules", "credits"}:
+                    if event.type == pygame.MOUSEMOTION:
+                        hovered_detail_hit = hit_test_detail_screen(
+                            home_screen_layout,
+                            event.pos,
+                        )
+                    elif event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
+                        clicked_hit = hit_test_detail_screen(
+                            home_screen_layout,
+                            event.pos,
+                        )
+                        if clicked_hit is not None and clicked_hit.kind == "start":
+                            load_selection_scene()
+                        elif clicked_hit is not None and clicked_hit.kind == "back":
+                            hovered_home_hit = None
+                            scene = "home"
                 elif scene == "start":
                     if event.type == pygame.MOUSEMOTION:
                         hovered_start_hit = hit_test_start_screen(
@@ -304,7 +438,28 @@ def run_phase_f_app(max_frames: int | None = None) -> None:
                             solver_session.mark_manual_edit()
                         refresh_validation()
 
-            if scene == "start":
+            if scene == "home":
+                draw_home_screen(
+                    surface,
+                    home_screen_layout,
+                    hovered_home_hit,
+                    hero_font,
+                    title_font,
+                    body_font,
+                    small_font,
+                )
+            elif scene in {"rules", "credits"}:
+                draw_detail_screen(
+                    surface,
+                    home_screen_layout,
+                    scene,
+                    hovered_detail_hit,
+                    hero_font,
+                    title_font,
+                    body_font,
+                    small_font,
+                )
+            elif scene == "start":
                 draw_start_screen(
                     surface,
                     start_screen_layout,

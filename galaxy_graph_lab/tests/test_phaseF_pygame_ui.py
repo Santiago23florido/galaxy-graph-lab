@@ -16,6 +16,7 @@ from galaxy_graph_lab.core import (
     validate_assignment,
 )
 from galaxy_graph_lab.ui.app import (
+    _window_size_from_event,
     request_solution_for_current_board,
     restore_manual_board_state,
     run_phase_f_app,
@@ -36,6 +37,22 @@ from galaxy_graph_lab.ui.solver_session import SolverSessionState
 
 
 class PhaseFPygameUiTests(unittest.TestCase):
+    def test_window_size_from_event_reads_videoresize_fields(self) -> None:
+        event = pygame.event.Event(
+            pygame.VIDEORESIZE,
+            {"w": 1280, "h": 820, "size": (1280, 820)},
+        )
+        surface = pygame.Surface((320, 240))
+
+        self.assertEqual(_window_size_from_event(event, surface), (1280, 820))
+
+    def test_window_size_from_event_reads_windowresized_fields(self) -> None:
+        window_resized = getattr(pygame, "WINDOWRESIZED", pygame.USEREVENT)
+        event = pygame.event.Event(window_resized, {"x": 1920, "y": 1080})
+        surface = pygame.Surface((320, 240))
+
+        self.assertEqual(_window_size_from_event(event, surface), (1920, 1080))
+
     def test_load_solver_assignment_replaces_the_full_tentative_board(self) -> None:
         state = EditablePuzzleState.from_center_ids(("A", "B"))
         state.replace_assignments({Cell(0, 0): "A", Cell(0, 1): "B"})

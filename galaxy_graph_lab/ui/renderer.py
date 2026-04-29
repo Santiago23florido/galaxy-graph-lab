@@ -131,6 +131,7 @@ def build_board_layout(
     padding: int = 24,
     label_gutter: int = 40,
     sidebar_width: int = 360,
+    window_size: tuple[int, int] | None = None,
 ) -> BoardLayout:
     """Return the fixed screen layout for one puzzle instance."""
 
@@ -138,8 +139,15 @@ def build_board_layout(
     board_height = puzzle_data.board.rows * cell_size
     board_left = padding + label_gutter
     board_top = padding + label_gutter
-    window_width = board_left + board_width + padding + sidebar_width + padding
-    window_height = max(board_top + board_height + padding, 940)
+    minimum_window_width = board_left + board_width + padding + sidebar_width + padding
+    minimum_window_height = max(board_top + board_height + padding, 940)
+
+    if window_size is None:
+        window_width = minimum_window_width
+        window_height = minimum_window_height
+    else:
+        window_width = max(minimum_window_width, int(window_size[0]))
+        window_height = max(minimum_window_height, int(window_size[1]))
 
     return BoardLayout(
         cell_size=cell_size,
