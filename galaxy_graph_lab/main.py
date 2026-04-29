@@ -24,7 +24,7 @@ def build_status_report() -> str:
             f"Python: {sys.version.split()[0]}",
             f"Pygame: {pygame.version.ver}",
             "Status: environment is ready.",
-            "UI Phase: start screen + board scene",
+            "UI Phase: home screen + selector + board scene",
         ]
     )
 

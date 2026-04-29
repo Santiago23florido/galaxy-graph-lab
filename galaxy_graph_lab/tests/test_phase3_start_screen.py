@@ -28,6 +28,12 @@ class Phase3StartScreenTests(unittest.TestCase):
         self.assertEqual(state.selected_difficulty, GENERATION_DIFFICULTY_EASY)
         self.assertEqual(state.selected_grid_size, BoardSpec(rows=5, cols=5))
 
+    def test_start_screen_layout_uses_requested_window_size(self) -> None:
+        layout = build_start_screen_layout((1440, 900))
+
+        self.assertEqual(layout.window_width, 1440)
+        self.assertEqual(layout.window_height, 900)
+
     def test_selecting_a_new_difficulty_replaces_an_invalid_grid_size(self) -> None:
         state = StartScreenState(
             selected_difficulty=GENERATION_DIFFICULTY_EASY,

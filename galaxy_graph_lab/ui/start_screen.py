@@ -21,6 +21,11 @@ _BUTTON_TEXT_COLOR = (15, 17, 20)
 _BUTTON_IDLE_TEXT_COLOR = (233, 238, 243)
 _BORDER_COLOR = (15, 17, 20)
 
+_DEFAULT_WINDOW_WIDTH = 1280
+_DEFAULT_WINDOW_HEIGHT = 820
+_MIN_WINDOW_WIDTH = 980
+_MIN_WINDOW_HEIGHT = 720
+
 
 @dataclass(frozen=True, slots=True)
 class StartScreenLayout:
@@ -74,15 +79,27 @@ class StartScreenState:
         self.status_message = "Select a difficulty and grid size, then generate a puzzle."
 
 
-def build_start_screen_layout() -> StartScreenLayout:
-    """Return the fixed layout for the start screen scene."""
+def build_start_screen_layout(
+    window_size: tuple[int, int] | None = None,
+) -> StartScreenLayout:
+    """Return the responsive layout for the start screen scene."""
+
+    if window_size is None:
+        window_width = _DEFAULT_WINDOW_WIDTH
+        window_height = _DEFAULT_WINDOW_HEIGHT
+    else:
+        window_width = max(_MIN_WINDOW_WIDTH, int(window_size[0]))
+        window_height = max(_MIN_WINDOW_HEIGHT, int(window_size[1]))
+
+    panel_width = min(980, window_width - 80)
+    panel_height = min(700, window_height - 80)
 
     return StartScreenLayout(
-        window_width=980,
-        window_height=720,
+        window_width=window_width,
+        window_height=window_height,
         padding=24,
-        panel_width=860,
-        panel_height=620,
+        panel_width=panel_width,
+        panel_height=panel_height,
     )
 
 
