@@ -54,6 +54,29 @@ def _random_generation_base_seed() -> int:
     return secrets.randbelow(2**31)
 
 
+def _window_size_from_event(
+    event: pygame.event.Event,
+    surface: pygame.Surface,
+) -> tuple[int, int]:
+    """Return one resize target from any supported Pygame resize event."""
+
+    event_size = getattr(event, "size", None)
+    if isinstance(event_size, tuple) and len(event_size) == 2:
+        return int(event_size[0]), int(event_size[1])
+
+    for width_name, height_name in (("w", "h"), ("x", "y")):
+        width = getattr(event, width_name, None)
+        height = getattr(event, height_name, None)
+        if isinstance(width, int | float) and isinstance(height, int | float):
+            return int(width), int(height)
+
+    display_surface = pygame.display.get_surface()
+    if display_surface is not None:
+        return display_surface.get_size()
+
+    return surface.get_size()
+
+
 def request_solution_for_current_board(
     puzzle_data,
     game_state: EditablePuzzleState,
@@ -286,7 +309,7 @@ def run_phase_f_app(max_frames: int | None = None) -> None:
                 if event.type == pygame.QUIT:
                     running = False
                 elif event.type == pygame.VIDEORESIZE or event.type == _WINDOW_RESIZED_EVENT:
-                    resize_window((event.w, event.h))
+                    resize_window(_window_size_from_event(event, surface))
                 elif event.type == pygame.KEYDOWN and event.key == pygame.K_ESCAPE:
                     running = False
                 elif scene == "home":
