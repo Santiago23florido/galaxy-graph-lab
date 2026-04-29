@@ -22,6 +22,7 @@ from .home_screen import (
 )
 from .puzzle_loader import FixedPuzzle, load_phase_a_puzzle
 from .renderer import DebugOverlayView, GeometryHit, cell_at_pixel, center_at_pixel, hit_test_board_geometry
+from .renderer import info_panel_rect, menu_button_rect, return_home_button_rect
 from .solver_session import SolverSessionState
 from .start_screen import (
     StartScreenHit,
@@ -73,7 +74,10 @@ __all__ = [
     "hit_test_home_screen",
     "hit_test_board_geometry",
     "hit_test_start_screen",
+    "info_panel_rect",
     "load_phase_a_puzzle",
+    "menu_button_rect",
+    "return_home_button_rect",
     "rules_button_rect",
     "run_phase_a_app",
     "run_phase_b_app",

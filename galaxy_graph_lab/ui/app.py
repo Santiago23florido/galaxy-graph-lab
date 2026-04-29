@@ -28,7 +28,10 @@ from .renderer import (
     build_board_layout,
     draw_phase_a_scene,
     hit_test_board_geometry,
+    info_panel_rect,
+    menu_button_rect,
     restore_manual_button_rect,
+    return_home_button_rect,
     show_solution_button_rect,
 )
 from .solver_session import SolverSessionState
@@ -186,6 +189,9 @@ def run_phase_f_app(max_frames: int | None = None) -> None:
         hovered_hit = None
         hovered_show_solution_button = False
         hovered_restore_manual_button = False
+        hovered_home_button = False
+        hovered_menu_button = False
+        info_menu_open = False
         game_state: EditablePuzzleState | None = None
         debug_state: DebugOverlayState | None = None
         solver_session: SolverSessionState | None = None
@@ -231,6 +237,9 @@ def run_phase_f_app(max_frames: int | None = None) -> None:
             nonlocal hovered_hit
             nonlocal hovered_show_solution_button
             nonlocal hovered_restore_manual_button
+            nonlocal hovered_home_button
+            nonlocal hovered_menu_button
+            nonlocal info_menu_open
             nonlocal game_state
             nonlocal debug_state
             nonlocal solver_session
@@ -257,6 +266,9 @@ def run_phase_f_app(max_frames: int | None = None) -> None:
             hovered_hit = None
             hovered_show_solution_button = False
             hovered_restore_manual_button = False
+            hovered_home_button = False
+            hovered_menu_button = False
+            info_menu_open = False
             scene = "board"
 
         def load_selection_scene() -> None:
@@ -277,6 +289,30 @@ def run_phase_f_app(max_frames: int | None = None) -> None:
             scene = panel_kind
             resize_window(surface.get_size())
             hovered_detail_hit = None
+
+        def load_home_scene() -> None:
+            nonlocal scene
+            nonlocal hovered_home_hit
+            nonlocal hovered_detail_hit
+            nonlocal hovered_start_hit
+            nonlocal hovered_hit
+            nonlocal hovered_show_solution_button
+            nonlocal hovered_restore_manual_button
+            nonlocal hovered_home_button
+            nonlocal hovered_menu_button
+            nonlocal info_menu_open
+
+            scene = "home"
+            resize_window(surface.get_size())
+            hovered_home_hit = None
+            hovered_detail_hit = None
+            hovered_start_hit = None
+            hovered_hit = None
+            hovered_show_solution_button = False
+            hovered_restore_manual_button = False
+            hovered_home_button = False
+            hovered_menu_button = False
+            info_menu_open = False
 
         def refresh_validation() -> None:
             nonlocal validation_result
@@ -404,12 +440,23 @@ def run_phase_f_app(max_frames: int | None = None) -> None:
                             body_font,
                             small_font,
                         ).collidepoint(event.pos)
+                        hovered_home_button = return_home_button_rect(layout).collidepoint(event.pos)
+                        hovered_menu_button = menu_button_rect(layout).collidepoint(event.pos)
+                        if info_menu_open and info_panel_rect(layout).collidepoint(event.pos):
+                            hovered_hit = None
+                            continue
                         hovered_hit = hit_test_board_geometry(
                             puzzle.puzzle_data,
                             layout,
                             event.pos,
                         )
                     elif event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
+                        if menu_button_rect(layout).collidepoint(event.pos):
+                            info_menu_open = not info_menu_open
+                            continue
+                        if return_home_button_rect(layout).collidepoint(event.pos):
+                            load_home_scene()
+                            continue
                         if show_solution_button_rect(
                             layout,
                             title_font,
@@ -425,6 +472,8 @@ def run_phase_f_app(max_frames: int | None = None) -> None:
                             small_font,
                         ).collidepoint(event.pos):
                             restore_manual_snapshot()
+                            continue
+                        if info_menu_open and info_panel_rect(layout).collidepoint(event.pos):
                             continue
 
                         previous_assignment = dict(game_state.assigned_center_by_cell)
@@ -534,6 +583,9 @@ def run_phase_f_app(max_frames: int | None = None) -> None:
                     board_mode_label=solver_session.board_mode_label,
                     show_solution_button_hovered=hovered_show_solution_button,
                     restore_manual_button_hovered=hovered_restore_manual_button,
+                    home_button_hovered=hovered_home_button,
+                    menu_button_hovered=hovered_menu_button,
+                    info_menu_open=info_menu_open,
                     can_restore_manual_snapshot=solver_session.can_restore_manual_snapshot,
                     comparison_by_cell=comparison_lookup,
                     comparison_match_count=comparison_match_count,
