@@ -26,8 +26,12 @@ from .solver_service import (
     PARALLEL_CALLBACK_SOLVER_BACKEND,
     EXACT_FLOW_SOLVER_BACKEND,
     PuzzleSolveResult,
+    SOLVER_STATUS_BACKEND_UNAVAILABLE,
+    SOLVER_STATUS_ERROR,
+    SOLVER_STATUS_INFEASIBLE,
     SOLVER_STATUS_SOLVED,
     SUPPORTED_SOLVER_BACKENDS,
+    SOLVER_STATUS_UNSUPPORTED_BACKEND,
     solve_puzzle,
 )
 from .validators import validate_assignment
@@ -45,6 +49,10 @@ SUPPORTED_DATASET_SOLVER_BACKENDS = frozenset(
 
 
 def _freeze_mapping(data: Mapping[str, object]) -> Mapping[str, object]:
+    return MappingProxyType(dict(data))
+
+
+def _freeze_path_mapping(data: Mapping[str, Path]) -> Mapping[str, Path]:
     return MappingProxyType(dict(data))
 
 
@@ -75,8 +83,12 @@ def _instance_file_name(
     return f"galaxy_{difficulty}_{_grid_label(board)}_{ordinal:03d}.json"
 
 
-def _result_file_name(instance_id: str, solver_backend: str) -> str:
-    return f"{instance_id}__{solver_backend}.txt"
+def _result_file_name(instance_id: str) -> str:
+    return f"{instance_id}.txt"
+
+
+def _backend_results_dir(results_dir: Path, solver_backend: str) -> Path:
+    return results_dir / solver_backend
 
 
 def _normalize_requested_counts(
@@ -166,6 +178,17 @@ def _clear_matching_files(directory: Path, pattern: str) -> None:
             path.unlink()
 
 
+def _clear_dataset_result_artifacts(directory: Path) -> None:
+    if not directory.exists():
+        return
+    for path in directory.rglob("galaxy_*.txt"):
+        if path.is_file():
+            path.unlink()
+    for path in directory.rglob("summary.json"):
+        if path.is_file():
+            path.unlink()
+
+
 def _dataset_instance_paths(data_dir: Path) -> tuple[Path, ...]:
     return tuple(sorted(data_dir.glob("galaxy_*.json")))
 
@@ -178,6 +201,12 @@ def _average_by_group(values_by_group: Mapping[str, list[float]]) -> Mapping[str
             if values
         }
     )
+
+
+def _average_or_none(values: list[float]) -> float | None:
+    if not values:
+        return None
+    return sum(values) / len(values)
 
 
 def _normalize_dataset_solver_backends(
@@ -250,6 +279,7 @@ class InstanceSolveResult:
     grid_size: BoardSpec
     solve_time: float
     is_optimal: bool
+    is_structurally_valid: bool
     solve_result: PuzzleSolveResult
 
 
@@ -265,10 +295,16 @@ class DataSetSolveResult:
     records: tuple[InstanceSolveResult, ...]
     result_paths: tuple[Path, ...]
     solver_backends: tuple[str, ...]
+    backend_result_dirs: Mapping[str, Path]
+    backend_summary_paths: Mapping[str, Path]
     average_solve_time_by_difficulty: Mapping[str, float]
     average_solve_time_by_difficulty_and_size: Mapping[str, Mapping[str, float]]
     average_solve_time_by_backend: Mapping[str, float]
     average_solve_time_by_backend_and_difficulty: Mapping[str, Mapping[str, float]]
+    status_counts_by_backend: Mapping[str, Mapping[str, int]]
+    average_mip_gap_by_backend: Mapping[str, float]
+    average_mip_node_count_by_backend: Mapping[str, float]
+    comparison_summary: Mapping[str, object]
 
 
 def generate_instance(
@@ -537,27 +573,31 @@ def solve_instance(
 
     source_path = Path(instance_path)
     output_dir = Path(results_dir)
-    output_dir.mkdir(parents=True, exist_ok=True)
-    result_path = output_dir / _result_file_name(instance.instance_id, solver_backend)
+    backend_output_dir = _backend_results_dir(output_dir, solver_backend)
+    backend_output_dir.mkdir(parents=True, exist_ok=True)
+    result_path = backend_output_dir / _result_file_name(instance.instance_id)
 
     start_time = time.perf_counter()
     solve_result = solve_puzzle(instance.puzzle_data, backend=solver_backend)
     solve_time = time.perf_counter() - start_time
 
     is_optimal = False
+    is_structurally_valid = False
     if solve_result.success and solve_result.assignment is not None:
         validation_result = validate_assignment(
             instance.puzzle_data,
             solve_result.assignment.cells_by_center,
         )
+        is_structurally_valid = validation_result.is_valid
         is_optimal = (
             solve_result.status_label == SOLVER_STATUS_SOLVED
-            and validation_result.is_valid
+            and is_structurally_valid
         )
 
     result_lines = [
         f"solveTime={solve_time:.6f}",
         f"isOptimal={_bool_as_text(is_optimal)}",
+        f"isStructurallyValid={_bool_as_text(is_structurally_valid)}",
         f"statusLabel={solve_result.status_label}",
         f"statusCode={solve_result.status_code}",
         f"backend={solve_result.backend_name}",
@@ -583,6 +623,7 @@ def solve_instance(
         grid_size=instance.grid_size,
         solve_time=solve_time,
         is_optimal=is_optimal,
+        is_structurally_valid=is_structurally_valid,
         solve_result=solve_result,
     )
 
@@ -600,12 +641,15 @@ def solve_dataset(
     output_dir = Path(results_dir)
     output_dir.mkdir(parents=True, exist_ok=True)
     selected_solver_backends = _normalize_dataset_solver_backends(solver_backend)
+    backend_result_dirs = _freeze_path_mapping(
+        {
+            backend_name: _backend_results_dir(output_dir, backend_name)
+            for backend_name in selected_solver_backends
+        }
+    )
 
     if clear_existing:
-        _clear_matching_files(output_dir, "galaxy_*.txt")
-        summary_path = output_dir / "summary.json"
-        if summary_path.exists():
-            summary_path.unlink()
+        _clear_dataset_result_artifacts(output_dir)
 
     instance_paths = _dataset_instance_paths(input_dir)
     if not instance_paths:
@@ -618,10 +662,16 @@ def solve_dataset(
             records=(),
             result_paths=(),
             solver_backends=selected_solver_backends,
+            backend_result_dirs=backend_result_dirs,
+            backend_summary_paths=MappingProxyType({}),
             average_solve_time_by_difficulty=MappingProxyType({}),
             average_solve_time_by_difficulty_and_size=MappingProxyType({}),
             average_solve_time_by_backend=MappingProxyType({}),
             average_solve_time_by_backend_and_difficulty=MappingProxyType({}),
+            status_counts_by_backend=MappingProxyType({}),
+            average_mip_gap_by_backend=MappingProxyType({}),
+            average_mip_node_count_by_backend=MappingProxyType({}),
+            comparison_summary=MappingProxyType({}),
         )
 
     records: list[InstanceSolveResult] = []
@@ -629,6 +679,11 @@ def solve_dataset(
     times_by_difficulty_and_size: dict[str, dict[str, list[float]]] = {}
     times_by_backend: dict[str, list[float]] = {}
     times_by_backend_and_difficulty: dict[str, dict[str, list[float]]] = {}
+    times_by_backend_and_difficulty_and_size: dict[str, dict[str, dict[str, list[float]]]] = {}
+    status_counts_by_backend: dict[str, dict[str, int]] = {}
+    mip_gaps_by_backend: dict[str, list[float]] = {}
+    mip_node_counts_by_backend: dict[str, list[float]] = {}
+    records_by_instance_and_backend: dict[str, dict[str, InstanceSolveResult]] = {}
 
     for instance_path in instance_paths:
         instance = load_instance(instance_path)
@@ -640,6 +695,9 @@ def solve_dataset(
                 solver_backend=concrete_backend,
             )
             records.append(record)
+            records_by_instance_and_backend.setdefault(record.instance_id, {})[
+                concrete_backend
+            ] = record
             times_by_difficulty.setdefault(record.requested_difficulty, []).append(
                 record.solve_time
             )
@@ -654,6 +712,26 @@ def solve_dataset(
                 backend_name,
                 {},
             ).setdefault(record.requested_difficulty, []).append(record.solve_time)
+            times_by_backend_and_difficulty_and_size.setdefault(
+                backend_name,
+                {},
+            ).setdefault(record.requested_difficulty, {}).setdefault(
+                size_label,
+                [],
+            ).append(record.solve_time)
+            status_counts_by_backend.setdefault(backend_name, {}).setdefault(
+                record.solve_result.status_label,
+                0,
+            )
+            status_counts_by_backend[backend_name][record.solve_result.status_label] += 1
+            if record.solve_result.mip_gap is not None:
+                mip_gaps_by_backend.setdefault(backend_name, []).append(
+                    record.solve_result.mip_gap
+                )
+            if record.solve_result.mip_node_count is not None:
+                mip_node_counts_by_backend.setdefault(backend_name, []).append(
+                    float(record.solve_result.mip_node_count)
+                )
 
     average_solve_time_by_difficulty = _average_by_group(times_by_difficulty)
     average_solve_time_by_difficulty_and_size = _freeze_nested_string_mapping(
@@ -675,11 +753,148 @@ def solve_dataset(
             for backend_name, difficulty_map in times_by_backend_and_difficulty.items()
         }
     )
+    frozen_status_counts_by_backend = _freeze_nested_string_mapping(
+        status_counts_by_backend
+    )
+    average_mip_gap_by_backend = MappingProxyType(
+        {
+            backend_name: average_gap
+            for backend_name, gaps in mip_gaps_by_backend.items()
+            if (average_gap := _average_or_none(gaps)) is not None
+        }
+    )
+    average_mip_node_count_by_backend = MappingProxyType(
+        {
+            backend_name: average_nodes
+            for backend_name, nodes in mip_node_counts_by_backend.items()
+            if (average_nodes := _average_or_none(nodes)) is not None
+        }
+    )
+
+    backend_summary_paths: dict[str, Path] = {}
+    for backend_name in selected_solver_backends:
+        backend_dir = backend_result_dirs[backend_name]
+        backend_dir.mkdir(parents=True, exist_ok=True)
+        backend_summary_path = backend_dir / "summary.json"
+        backend_average_solve_time_by_difficulty = {
+            difficulty: (sum(values) / len(values))
+            for difficulty, values in times_by_backend_and_difficulty.get(
+                backend_name,
+                {},
+            ).items()
+        }
+        backend_average_solve_time_by_difficulty_and_size = {
+            difficulty: {
+                size_label: (sum(values) / len(values))
+                for size_label, values in size_map.items()
+            }
+            for difficulty, size_map in times_by_backend_and_difficulty_and_size.get(
+                backend_name,
+                {},
+            ).items()
+        }
+        backend_status_counts = dict(status_counts_by_backend.get(backend_name, {}))
+        backend_summary_payload = {
+            "backend": backend_name,
+            "instance_count": sum(backend_status_counts.values()),
+            "average_solve_time": _average_or_none(times_by_backend.get(backend_name, [])),
+            "average_solve_time_by_difficulty": backend_average_solve_time_by_difficulty,
+            "average_solve_time_by_difficulty_and_size": (
+                backend_average_solve_time_by_difficulty_and_size
+            ),
+            "status_counts": backend_status_counts,
+            "solved_count": backend_status_counts.get(SOLVER_STATUS_SOLVED, 0),
+            "infeasible_count": backend_status_counts.get(SOLVER_STATUS_INFEASIBLE, 0),
+            "backend_unavailable_count": backend_status_counts.get(
+                SOLVER_STATUS_BACKEND_UNAVAILABLE,
+                0,
+            ),
+            "solver_error_count": backend_status_counts.get(SOLVER_STATUS_ERROR, 0),
+            "unsupported_backend_count": backend_status_counts.get(
+                SOLVER_STATUS_UNSUPPORTED_BACKEND,
+                0,
+            ),
+            "average_mip_gap": average_mip_gap_by_backend.get(backend_name),
+            "average_mip_node_count": average_mip_node_count_by_backend.get(
+                backend_name
+            ),
+            "result_files": sorted(
+                record.result_path.name
+                for record in records
+                if record.solve_result.backend_name == backend_name
+            ),
+        }
+        backend_summary_path.write_text(
+            json.dumps(backend_summary_payload, indent=2, sort_keys=True) + "\n",
+            encoding="utf-8",
+        )
+        backend_summary_paths[backend_name] = backend_summary_path
+
+    if len(selected_solver_backends) >= 2:
+        baseline_backend = selected_solver_backends[0]
+        comparison_backend = selected_solver_backends[1]
+        time_differences_by_difficulty: dict[str, list[float]] = {}
+        instances_solved_by_both = 0
+        success_status_disagreement_count = 0
+        structural_validity_disagreement_count = 0
+
+        for instance_id, record_map in records_by_instance_and_backend.items():
+            baseline_record = record_map.get(baseline_backend)
+            comparison_record = record_map.get(comparison_backend)
+            if baseline_record is None or comparison_record is None:
+                continue
+            if (
+                baseline_record.solve_result.status_label == SOLVER_STATUS_SOLVED
+                and comparison_record.solve_result.status_label == SOLVER_STATUS_SOLVED
+            ):
+                instances_solved_by_both += 1
+            if baseline_record.solve_result.success != comparison_record.solve_result.success:
+                success_status_disagreement_count += 1
+            if (
+                baseline_record.is_structurally_valid
+                != comparison_record.is_structurally_valid
+            ):
+                structural_validity_disagreement_count += 1
+            time_differences_by_difficulty.setdefault(
+                baseline_record.requested_difficulty,
+                [],
+            ).append(comparison_record.solve_time - baseline_record.solve_time)
+
+        comparison_summary = _freeze_mapping(
+            {
+                "time_difference_reference_pair": (
+                    baseline_backend,
+                    comparison_backend,
+                ),
+                "instances_solved_by_both": instances_solved_by_both,
+                "average_time_difference_by_difficulty": MappingProxyType(
+                    {
+                        difficulty: (sum(values) / len(values))
+                        for difficulty, values in time_differences_by_difficulty.items()
+                        if values
+                    }
+                ),
+                "success_status_disagreement_count": success_status_disagreement_count,
+                "structural_validity_disagreement_count": (
+                    structural_validity_disagreement_count
+                ),
+            }
+        )
+    else:
+        comparison_summary = MappingProxyType({})
 
     summary_path = output_dir / "summary.json"
     summary_payload = {
         "instance_count": len(records),
         "solver_backends": list(selected_solver_backends),
+        "backend_result_directories": {
+            backend_name: str(path)
+            for backend_name, path in backend_result_dirs.items()
+        },
+        "backend_summaries": {
+            backend_name: str(path)
+            for backend_name, path in backend_summary_paths.items()
+        },
         "average_solve_time_by_difficulty": dict(average_solve_time_by_difficulty),
         "average_solve_time_by_difficulty_and_size": {
             difficulty: dict(size_map)
@@ -690,7 +905,23 @@ def solve_dataset(
             backend_name: dict(difficulty_map)
             for backend_name, difficulty_map in average_solve_time_by_backend_and_difficulty.items()
         },
-        "result_files": [record.result_path.name for record in records],
+        "status_counts_by_backend": {
+            backend_name: dict(status_counts)
+            for backend_name, status_counts in frozen_status_counts_by_backend.items()
+        },
+        "average_mip_gap_by_backend": dict(average_mip_gap_by_backend),
+        "average_mip_node_count_by_backend": dict(average_mip_node_count_by_backend),
+        "comparison": {
+            key: (
+                dict(value)
+                if isinstance(value, Mapping)
+                else list(value)
+                if isinstance(value, tuple)
+                else value
+            )
+            for key, value in comparison_summary.items()
+        },
+        "result_files": [str(record.result_path.relative_to(output_dir)) for record in records],
     }
     summary_path.write_text(
         json.dumps(summary_payload, indent=2, sort_keys=True) + "\n",
@@ -706,10 +937,16 @@ def solve_dataset(
         records=tuple(records),
         result_paths=tuple(record.result_path for record in records),
         solver_backends=selected_solver_backends,
+        backend_result_dirs=backend_result_dirs,
+        backend_summary_paths=_freeze_path_mapping(backend_summary_paths),
         average_solve_time_by_difficulty=average_solve_time_by_difficulty,
         average_solve_time_by_difficulty_and_size=average_solve_time_by_difficulty_and_size,
         average_solve_time_by_backend=average_solve_time_by_backend,
         average_solve_time_by_backend_and_difficulty=average_solve_time_by_backend_and_difficulty,
+        status_counts_by_backend=frozen_status_counts_by_backend,
+        average_mip_gap_by_backend=average_mip_gap_by_backend,
+        average_mip_node_count_by_backend=average_mip_node_count_by_backend,
+        comparison_summary=comparison_summary,
     )
 
 

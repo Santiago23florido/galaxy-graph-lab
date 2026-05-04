@@ -181,6 +181,7 @@ class DataSetPipelineTests(unittest.TestCase):
                 contents = result_path.read_text(encoding="utf-8")
                 self.assertIn("solveTime=", contents)
                 self.assertIn("isOptimal=", contents)
+                self.assertEqual(result_path.parent.name, EXACT_FLOW_SOLVER_BACKEND)
 
     def test_solve_instance_forwards_selected_backend(self) -> None:
         instance = self._stored_instance()
@@ -222,8 +223,12 @@ class DataSetPipelineTests(unittest.TestCase):
         )
         self.assertEqual(record.solve_result.backend_name, PARALLEL_CALLBACK_SOLVER_BACKEND)
         self.assertEqual(
+            record.result_path.parent.name,
+            PARALLEL_CALLBACK_SOLVER_BACKEND,
+        )
+        self.assertEqual(
             record.result_path.name,
-            "galaxy_easy_1x1_001__parallel_callback.txt",
+            "galaxy_easy_1x1_001.txt",
         )
 
     def test_solve_dataset_can_run_both_backends(self) -> None:
@@ -262,6 +267,13 @@ class DataSetPipelineTests(unittest.TestCase):
                     solve_result.summary_path is not None
                     and solve_result.summary_path.exists()
                 )
+                self.assertEqual(
+                    set(solve_result.backend_summary_paths),
+                    {EXACT_FLOW_SOLVER_BACKEND, PARALLEL_CALLBACK_SOLVER_BACKEND},
+                )
+                self.assertTrue(
+                    all(path.exists() for path in solve_result.backend_summary_paths.values())
+                )
 
         self.assertTrue(solve_result.success)
         self.assertEqual(
@@ -279,10 +291,22 @@ class DataSetPipelineTests(unittest.TestCase):
             {EXACT_FLOW_SOLVER_BACKEND, PARALLEL_CALLBACK_SOLVER_BACKEND},
         )
         self.assertEqual(
-            {path.name for path in solve_result.result_paths},
+            solve_result.status_counts_by_backend[EXACT_FLOW_SOLVER_BACKEND]["solved"],
+            1,
+        )
+        self.assertEqual(
+            solve_result.status_counts_by_backend[PARALLEL_CALLBACK_SOLVER_BACKEND]["solved"],
+            1,
+        )
+        self.assertEqual(
+            solve_result.comparison_summary["instances_solved_by_both"],
+            1,
+        )
+        self.assertEqual(
+            {str(path.relative_to(results_directory)) for path in solve_result.result_paths},
             {
-                "galaxy_easy_1x1_001__exact_flow.txt",
-                "galaxy_easy_1x1_001__parallel_callback.txt",
+                "exact_flow/galaxy_easy_1x1_001.txt",
+                "parallel_callback/galaxy_easy_1x1_001.txt",
             },
         )
 
