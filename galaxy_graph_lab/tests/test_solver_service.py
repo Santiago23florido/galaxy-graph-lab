@@ -5,10 +5,12 @@ from unittest.mock import patch
 
 from galaxy_graph_lab.core import (
     BoardSpec,
+    CallbackParallelSolveResult,
     Cell,
     CenterSpec,
     EXACT_FLOW_SOLVER_BACKEND,
     FlowMilpSolveResult,
+    GalaxyAssignment,
     PARALLEL_CALLBACK_SOLVER_BACKEND,
     PuzzleData,
     PuzzleSolveResult,
@@ -30,6 +32,12 @@ class SolverServiceTests(unittest.TestCase):
                 CenterSpec.from_coordinates("A", 0, 1),
                 CenterSpec.from_coordinates("B", 1.5, 1),
             ],
+        )
+
+    def _single_cell_assignment(self) -> GalaxyAssignment:
+        return GalaxyAssignment(
+            assigned_center_by_cell={Cell(0, 0): "g0"},
+            cells_by_center={"g0": (Cell(0, 0),)},
         )
 
     def test_solve_puzzle_wraps_exact_flow_as_public_entrypoint(self) -> None:
@@ -201,9 +209,111 @@ class SolverServiceTests(unittest.TestCase):
         self.assertEqual(result.status_label, SOLVER_STATUS_BACKEND_UNAVAILABLE)
         self.assertEqual(
             result.message,
-            "Solver backend 'parallel_callback' is unavailable: callback-parallel backend is not implemented yet.",
+            "Solver backend 'parallel_callback' is unavailable: No module named 'cplex'.",
         )
         self.assertIsNone(result.assignment)
+
+    def test_solve_puzzle_normalizes_parallel_callback_backend_result_shape(self) -> None:
+        puzzle_data = PuzzleData.from_specs(
+            BoardSpec(rows=1, cols=1),
+            [CenterSpec.from_coordinates("g0", 0, 0)],
+        )
+        backend_result = CallbackParallelSolveResult(
+            success=False,
+            status=11,
+            message="callback backend failed",
+            objective_value=None,
+            mip_gap=None,
+            mip_node_count=None,
+            assignment=None,
+            assignment_variable_values=None,
+            directed_flow_values=None,
+            source_flow_values=None,
+        )
+
+        with patch(
+            "galaxy_graph_lab.core.solver_service.solve_callback_parallel_model",
+            return_value=backend_result,
+        ) as solve_callback_mock:
+            result = solve_puzzle(puzzle_data, backend=PARALLEL_CALLBACK_SOLVER_BACKEND)
+
+        solve_callback_mock.assert_called_once_with(puzzle_data, options=None)
+        self.assertIsInstance(result, PuzzleSolveResult)
+        self.assertFalse(result.success)
+        self.assertEqual(result.backend_name, PARALLEL_CALLBACK_SOLVER_BACKEND)
+        self.assertEqual(result.status_code, 11)
+        self.assertEqual(result.status_label, SOLVER_STATUS_ERROR)
+        self.assertEqual(
+            result.message,
+            "The solver could not complete successfully: callback backend failed",
+        )
+        self.assertIsNone(result.assignment)
+
+    def test_solve_puzzle_reports_parallel_callback_infeasible_with_common_status(self) -> None:
+        puzzle_data = PuzzleData.from_specs(
+            BoardSpec(rows=1, cols=1),
+            [CenterSpec.from_coordinates("g0", 0, 0)],
+        )
+        backend_result = CallbackParallelSolveResult(
+            success=False,
+            status=103,
+            message="CPLEX Error 1217: No solution exists.",
+            objective_value=None,
+            mip_gap=None,
+            mip_node_count=42,
+            assignment=None,
+            assignment_variable_values=None,
+            directed_flow_values=None,
+            source_flow_values=None,
+        )
+
+        with patch(
+            "galaxy_graph_lab.core.solver_service.solve_callback_parallel_model",
+            return_value=backend_result,
+        ):
+            result = solve_puzzle(puzzle_data, backend=PARALLEL_CALLBACK_SOLVER_BACKEND)
+
+        self.assertFalse(result.success)
+        self.assertEqual(result.backend_name, PARALLEL_CALLBACK_SOLVER_BACKEND)
+        self.assertEqual(result.status_code, 103)
+        self.assertEqual(result.status_label, SOLVER_STATUS_INFEASIBLE)
+        self.assertEqual(result.message, "No feasible solution exists for this puzzle.")
+        self.assertEqual(result.mip_node_count, 42)
+        self.assertIsNone(result.assignment)
+
+    def test_solve_puzzle_normalizes_parallel_callback_success_shape(self) -> None:
+        puzzle_data = PuzzleData.from_specs(
+            BoardSpec(rows=1, cols=1),
+            [CenterSpec.from_coordinates("g0", 0, 0)],
+        )
+        backend_result = CallbackParallelSolveResult(
+            success=True,
+            status=101,
+            message="optimal",
+            objective_value=0.0,
+            mip_gap=0.0,
+            mip_node_count=7,
+            assignment=self._single_cell_assignment(),
+            assignment_variable_values=(1.0,),
+            directed_flow_values={},
+            source_flow_values={},
+        )
+
+        with patch(
+            "galaxy_graph_lab.core.solver_service.solve_callback_parallel_model",
+            return_value=backend_result,
+        ):
+            result = solve_puzzle(puzzle_data, backend=PARALLEL_CALLBACK_SOLVER_BACKEND)
+
+        self.assertTrue(result.success)
+        self.assertEqual(result.backend_name, PARALLEL_CALLBACK_SOLVER_BACKEND)
+        self.assertEqual(result.status_code, 101)
+        self.assertEqual(result.status_label, SOLVER_STATUS_SOLVED)
+        self.assertEqual(result.message, "Solution found.")
+        self.assertEqual(result.objective_value, 0.0)
+        self.assertEqual(result.mip_gap, 0.0)
+        self.assertEqual(result.mip_node_count, 7)
+        self.assertEqual(result.assignment, backend_result.assignment)
 
     def test_solve_puzzle_reports_backend_unavailable(self) -> None:
         puzzle_data = PuzzleData.from_specs(

@@ -68,12 +68,17 @@ from .graph import GridEdge, GridGraph
 from .milp import (
     BaseMilpModel,
     BaseMilpSolveResult,
+    CallbackParallelConstraintRow,
+    CallbackParallelMilpModel,
+    CallbackParallelProblemPayload,
+    CallbackParallelSolveResult,
     DirectedFlowKey,
     FlowMilpModel,
     FlowMilpSolveResult,
     GalaxyAssignment,
     SourceFlowKey,
     solve_base_model,
+    solve_callback_parallel_model,
     solve_flow_model,
 )
 from .model_data import PuzzleData
@@ -143,6 +148,10 @@ __all__ = [
     "EXACT_FLOW_SOLVER_BACKEND",
     "BaseMilpModel",
     "BaseMilpSolveResult",
+    "CallbackParallelConstraintRow",
+    "CallbackParallelMilpModel",
+    "CallbackParallelProblemPayload",
+    "CallbackParallelSolveResult",
     "DirectedFlowKey",
     "FlowMilpModel",
     "FlowMilpSolveResult",
@@ -191,5 +200,6 @@ __all__ = [
     "solve_dataset",
     "solve_instance",
     "solve_base_model",
+    "solve_callback_parallel_model",
     "solve_flow_model",
 ]

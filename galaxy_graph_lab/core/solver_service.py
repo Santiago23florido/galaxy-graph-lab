@@ -8,7 +8,13 @@ from scipy.optimize import LinearConstraint
 from scipy.sparse import coo_array
 
 from .board import Cell
-from .milp import FlowMilpModel, GalaxyAssignment, solve_flow_model
+from .milp import (
+    CallbackParallelMilpModel,
+    FlowMilpModel,
+    GalaxyAssignment,
+    solve_callback_parallel_model,
+    solve_flow_model,
+)
 from .milp.base_model import _build_exact_constraint
 from .model_data import PuzzleData
 
@@ -27,6 +33,9 @@ SOLVER_STATUS_INFEASIBLE = "infeasible"
 SOLVER_STATUS_ERROR = "solver_error"
 SOLVER_STATUS_BACKEND_UNAVAILABLE = "backend_unavailable"
 SOLVER_STATUS_UNSUPPORTED_BACKEND = "unsupported_backend"
+
+
+_AssignmentIndexedModel = FlowMilpModel | CallbackParallelMilpModel
 
 
 @dataclass(frozen=True, slots=True)
@@ -81,6 +90,27 @@ def _normalize_exact_flow_failure_message(raw_message: str) -> tuple[str, str]:
     )
 
 
+def _normalize_parallel_callback_failure_message(raw_message: str) -> tuple[str, str]:
+    lowered = raw_message.lower()
+    if (
+        "infeasible" in lowered
+        or "integer infeasible" in lowered
+        or "primal infeasible" in lowered
+        or "infeasible or unbounded" in lowered
+        or "no feasible" in lowered
+        or "no solution exists" in lowered
+        or "no integer solution" in lowered
+    ):
+        return (
+            SOLVER_STATUS_INFEASIBLE,
+            "No feasible solution exists for this puzzle.",
+        )
+    return (
+        SOLVER_STATUS_ERROR,
+        f"The solver could not complete successfully: {raw_message}",
+    )
+
+
 def _freeze_preferred_assignment(
     puzzle_data: PuzzleData,
     assignment_by_cell: Mapping[Cell, str] | None,
@@ -99,7 +129,7 @@ def _freeze_preferred_assignment(
 
 
 def _required_assignment_constraint(
-    model: FlowMilpModel,
+    model: _AssignmentIndexedModel,
     required_assignment_by_cell: Mapping[Cell, str],
 ):
     rows = [
@@ -114,7 +144,7 @@ def _required_assignment_constraint(
 
 
 def _minimum_mismatch_constraint(
-    model: FlowMilpModel,
+    model: _AssignmentIndexedModel,
     avoid_assignment_by_cell: Mapping[Cell, str],
     minimum_mismatches: int,
 ) -> LinearConstraint | None:
@@ -145,7 +175,7 @@ def _minimum_mismatch_constraint(
 
 
 def _preference_objective(
-    model: FlowMilpModel,
+    model: _AssignmentIndexedModel,
     preferred_assignment_by_cell: Mapping[Cell, str],
     avoid_assignment_by_cell: Mapping[Cell, str] | None = None,
 ) -> tuple[float, ...]:
@@ -179,21 +209,178 @@ def _solve_with_parallel_callback_backend(
     avoid_assignment_by_cell: Mapping[Cell, str] | None = None,
     minimum_mismatches_against_avoid: int | None = None,
 ) -> PuzzleSolveResult:
-    """Placeholder dispatch branch for the callback-parallel backend."""
+    """Solve one puzzle instance with the callback-parallel backend."""
 
-    del puzzle_data
-    del options
-    del preferred_assignment_by_cell
-    del avoid_assignment_by_cell
-    del minimum_mismatches_against_avoid
-    return _solver_failure(
-        backend_name=PARALLEL_CALLBACK_SOLVER_BACKEND,
-        status_code=-2,
-        status_label=SOLVER_STATUS_BACKEND_UNAVAILABLE,
-        message=(
-            "Solver backend 'parallel_callback' is unavailable: "
-            "callback-parallel backend is not implemented yet."
-        ),
+    backend = PARALLEL_CALLBACK_SOLVER_BACKEND
+
+    try:
+        preferred_assignment = _freeze_preferred_assignment(
+            puzzle_data,
+            preferred_assignment_by_cell,
+        )
+        avoid_assignment = _freeze_preferred_assignment(
+            puzzle_data,
+            avoid_assignment_by_cell,
+        )
+        if not preferred_assignment and not avoid_assignment:
+            callback_result = solve_callback_parallel_model(puzzle_data, options=options)
+        elif preferred_assignment and not avoid_assignment:
+            model = CallbackParallelMilpModel.from_puzzle_data(puzzle_data)
+            required_constraint = _required_assignment_constraint(model, preferred_assignment)
+            callback_result = model.solve(
+                options=options,
+                extra_constraints=()
+                if required_constraint is None
+                else (required_constraint,),
+            )
+        else:
+            model = CallbackParallelMilpModel.from_puzzle_data(puzzle_data)
+            mismatch_constraint = None
+            if minimum_mismatches_against_avoid is not None:
+                mismatch_constraint = _minimum_mismatch_constraint(
+                    model,
+                    avoid_assignment,
+                    minimum_mismatches_against_avoid,
+                )
+            callback_result = model.solve(
+                options=options,
+                objective=_preference_objective(
+                    model,
+                    preferred_assignment,
+                    avoid_assignment,
+                ),
+                extra_constraints=()
+                if mismatch_constraint is None
+                else (mismatch_constraint,),
+            )
+    except ModuleNotFoundError as exc:
+        return _solver_failure(
+            backend_name=backend,
+            status_code=-2,
+            status_label=SOLVER_STATUS_BACKEND_UNAVAILABLE,
+            message=f"Solver backend '{backend}' is unavailable: {exc}.",
+        )
+    except ImportError as exc:
+        return _solver_failure(
+            backend_name=backend,
+            status_code=-2,
+            status_label=SOLVER_STATUS_BACKEND_UNAVAILABLE,
+            message=f"Solver backend '{backend}' is unavailable: {exc}.",
+        )
+    except Exception as exc:
+        return _solver_failure(
+            backend_name=backend,
+            status_code=-3,
+            status_label=SOLVER_STATUS_ERROR,
+            message=f"The solver raised an internal error: {exc}.",
+        )
+
+    if callback_result.success:
+        success_message = "Solution found."
+        solution_mode = "plain_exact"
+        matched_preference_count = _count_preference_matches(
+            callback_result.assignment,
+            preferred_assignment,
+        )
+        mismatch_count = None
+        if preferred_assignment and avoid_assignment:
+            success_message = "Solution found and it follows the requested shape guidance."
+            solution_mode = "guided_shape"
+            mismatch_count = len(preferred_assignment) - int(matched_preference_count or 0)
+        elif preferred_assignment:
+            success_message = "Solution found and it keeps all current selections."
+            solution_mode = "guided_exact"
+            mismatch_count = 0
+        return PuzzleSolveResult(
+            success=True,
+            backend_name=backend,
+            status_code=callback_result.status,
+            status_label=SOLVER_STATUS_SOLVED,
+            message=success_message,
+            assignment=callback_result.assignment,
+            objective_value=callback_result.objective_value,
+            mip_gap=callback_result.mip_gap,
+            mip_node_count=callback_result.mip_node_count,
+            solution_mode=solution_mode,
+            preferred_assignment_count=len(preferred_assignment),
+            matched_preference_count=matched_preference_count,
+            mismatch_count=mismatch_count,
+        )
+
+    status_label, message = _normalize_parallel_callback_failure_message(
+        callback_result.message
+    )
+    if preferred_assignment and not avoid_assignment and status_label == SOLVER_STATUS_INFEASIBLE:
+        try:
+            model = CallbackParallelMilpModel.from_puzzle_data(puzzle_data)
+            fallback_result = model.solve(
+                options=options,
+                objective=_preference_objective(model, preferred_assignment),
+            )
+        except ModuleNotFoundError as exc:
+            return _solver_failure(
+                backend_name=backend,
+                status_code=-2,
+                status_label=SOLVER_STATUS_BACKEND_UNAVAILABLE,
+                message=f"Solver backend '{backend}' is unavailable: {exc}.",
+            )
+        except ImportError as exc:
+            return _solver_failure(
+                backend_name=backend,
+                status_code=-2,
+                status_label=SOLVER_STATUS_BACKEND_UNAVAILABLE,
+                message=f"Solver backend '{backend}' is unavailable: {exc}.",
+            )
+        except Exception as exc:
+            return _solver_failure(
+                backend_name=backend,
+                status_code=-3,
+                status_label=SOLVER_STATUS_ERROR,
+                message=f"The solver raised an internal error: {exc}.",
+            )
+
+        if fallback_result.success:
+            matched_preference_count = _count_preference_matches(
+                fallback_result.assignment,
+                preferred_assignment,
+            )
+            mismatch_count = len(preferred_assignment) - int(matched_preference_count or 0)
+            return PuzzleSolveResult(
+                success=True,
+                backend_name=backend,
+                status_code=fallback_result.status,
+                status_label=SOLVER_STATUS_SOLVED,
+                message=(
+                    "Current selections cannot all be satisfied. "
+                    f"Loaded the closest solution with {mismatch_count} mismatch(es)."
+                ),
+                assignment=fallback_result.assignment,
+                objective_value=fallback_result.objective_value,
+                mip_gap=fallback_result.mip_gap,
+                mip_node_count=fallback_result.mip_node_count,
+                solution_mode="guided_min_mismatch",
+                preferred_assignment_count=len(preferred_assignment),
+                matched_preference_count=matched_preference_count,
+                mismatch_count=mismatch_count,
+            )
+
+        status_label, message = _normalize_parallel_callback_failure_message(
+            fallback_result.message
+        )
+        callback_result = fallback_result
+
+    return PuzzleSolveResult(
+        success=callback_result.success,
+        backend_name=backend,
+        status_code=callback_result.status,
+        status_label=status_label,
+        message=message,
+        assignment=callback_result.assignment,
+        objective_value=callback_result.objective_value,
+        mip_gap=callback_result.mip_gap,
+        mip_node_count=callback_result.mip_node_count,
+        solution_mode="plain_exact",
+        preferred_assignment_count=len(preferred_assignment),
     )
 
 
