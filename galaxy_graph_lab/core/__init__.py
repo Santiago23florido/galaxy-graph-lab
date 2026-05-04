@@ -79,12 +79,15 @@ from .milp import (
 from .model_data import PuzzleData
 from .solver_service import (
     DEFAULT_SOLVER_BACKEND,
+    EXACT_FLOW_SOLVER_BACKEND,
+    PARALLEL_CALLBACK_SOLVER_BACKEND,
     PuzzleSolveResult,
     SOLVER_STATUS_BACKEND_UNAVAILABLE,
     SOLVER_STATUS_ERROR,
     SOLVER_STATUS_INFEASIBLE,
     SOLVER_STATUS_SOLVED,
     SOLVER_STATUS_UNSUPPORTED_BACKEND,
+    SUPPORTED_SOLVER_BACKENDS,
     solve_puzzle,
 )
 from .validators import (
@@ -137,12 +140,14 @@ __all__ = [
     "PuzzleGenerationResult",
     "RectangleRegion",
     "DEFAULT_SOLVER_BACKEND",
+    "EXACT_FLOW_SOLVER_BACKEND",
     "BaseMilpModel",
     "BaseMilpSolveResult",
     "DirectedFlowKey",
     "FlowMilpModel",
     "FlowMilpSolveResult",
     "GalaxyAssignment",
+    "PARALLEL_CALLBACK_SOLVER_BACKEND",
     "PuzzleSolveResult",
     "SOLVER_STATUS_BACKEND_UNAVAILABLE",
     "SOLVER_STATUS_ERROR",
@@ -151,6 +156,7 @@ __all__ = [
     "SOLVER_STATUS_UNSUPPORTED_BACKEND",
     "SourceFlowKey",
     "StoredPuzzleInstance",
+    "SUPPORTED_SOLVER_BACKENDS",
     "AssignmentValidationResult",
     "CandidateAssignment",
     "admissible_cells",

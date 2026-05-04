@@ -7,7 +7,9 @@ from galaxy_graph_lab.core import (
     BoardSpec,
     Cell,
     CenterSpec,
+    EXACT_FLOW_SOLVER_BACKEND,
     FlowMilpSolveResult,
+    PARALLEL_CALLBACK_SOLVER_BACKEND,
     PuzzleData,
     PuzzleSolveResult,
     SOLVER_STATUS_BACKEND_UNAVAILABLE,
@@ -39,7 +41,7 @@ class SolverServiceTests(unittest.TestCase):
 
         self.assertIsInstance(result, PuzzleSolveResult)
         self.assertTrue(result.success)
-        self.assertEqual(result.backend_name, "exact_flow")
+        self.assertEqual(result.backend_name, EXACT_FLOW_SOLVER_BACKEND)
         self.assertEqual(result.status_label, SOLVER_STATUS_SOLVED)
         self.assertEqual(result.message, "Solution found.")
         self.assertIsNotNone(result.assignment)
@@ -126,7 +128,7 @@ class SolverServiceTests(unittest.TestCase):
         solve_flow_mock.assert_called_once_with(puzzle_data, options=None)
         self.assertIsInstance(result, PuzzleSolveResult)
         self.assertFalse(result.success)
-        self.assertEqual(result.backend_name, "exact_flow")
+        self.assertEqual(result.backend_name, EXACT_FLOW_SOLVER_BACKEND)
         self.assertEqual(result.status_code, 9)
         self.assertEqual(result.status_label, SOLVER_STATUS_ERROR)
         self.assertEqual(
@@ -180,6 +182,26 @@ class SolverServiceTests(unittest.TestCase):
         self.assertEqual(
             result.message,
             "Solver backend 'mock_backend' is not supported.",
+        )
+        self.assertIsNone(result.assignment)
+
+    def test_solve_puzzle_dispatches_parallel_callback_backend(self) -> None:
+        puzzle_data = PuzzleData.from_specs(
+            BoardSpec(rows=1, cols=1),
+            [CenterSpec.from_coordinates("g0", 0, 0)],
+        )
+
+        with patch("galaxy_graph_lab.core.solver_service.solve_flow_model") as solve_flow_mock:
+            result = solve_puzzle(puzzle_data, backend=PARALLEL_CALLBACK_SOLVER_BACKEND)
+
+        solve_flow_mock.assert_not_called()
+        self.assertFalse(result.success)
+        self.assertEqual(result.backend_name, PARALLEL_CALLBACK_SOLVER_BACKEND)
+        self.assertEqual(result.status_code, -2)
+        self.assertEqual(result.status_label, SOLVER_STATUS_BACKEND_UNAVAILABLE)
+        self.assertEqual(
+            result.message,
+            "Solver backend 'parallel_callback' is unavailable: callback-parallel backend is not implemented yet.",
         )
         self.assertIsNone(result.assignment)
 

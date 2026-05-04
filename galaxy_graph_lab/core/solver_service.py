@@ -13,7 +13,15 @@ from .milp.base_model import _build_exact_constraint
 from .model_data import PuzzleData
 
 
-DEFAULT_SOLVER_BACKEND = "exact_flow"
+EXACT_FLOW_SOLVER_BACKEND = "exact_flow"
+PARALLEL_CALLBACK_SOLVER_BACKEND = "parallel_callback"
+SUPPORTED_SOLVER_BACKENDS = frozenset(
+    {
+        EXACT_FLOW_SOLVER_BACKEND,
+        PARALLEL_CALLBACK_SOLVER_BACKEND,
+    }
+)
+DEFAULT_SOLVER_BACKEND = EXACT_FLOW_SOLVER_BACKEND
 SOLVER_STATUS_SOLVED = "solved"
 SOLVER_STATUS_INFEASIBLE = "infeasible"
 SOLVER_STATUS_ERROR = "solver_error"
@@ -163,24 +171,43 @@ def _count_preference_matches(
     )
 
 
-def solve_puzzle(
+def _solve_with_parallel_callback_backend(
     puzzle_data: PuzzleData,
     *,
-    backend: str = DEFAULT_SOLVER_BACKEND,
     options: Mapping[str, object] | None = None,
     preferred_assignment_by_cell: Mapping[Cell, str] | None = None,
     avoid_assignment_by_cell: Mapping[Cell, str] | None = None,
     minimum_mismatches_against_avoid: int | None = None,
 ) -> PuzzleSolveResult:
-    """Solve one puzzle instance through the current canonical exact backend."""
+    """Placeholder dispatch branch for the callback-parallel backend."""
 
-    if backend != DEFAULT_SOLVER_BACKEND:
-        return _solver_failure(
-            backend_name=backend,
-            status_code=-1,
-            status_label=SOLVER_STATUS_UNSUPPORTED_BACKEND,
-            message=f"Solver backend '{backend}' is not supported.",
-        )
+    del puzzle_data
+    del options
+    del preferred_assignment_by_cell
+    del avoid_assignment_by_cell
+    del minimum_mismatches_against_avoid
+    return _solver_failure(
+        backend_name=PARALLEL_CALLBACK_SOLVER_BACKEND,
+        status_code=-2,
+        status_label=SOLVER_STATUS_BACKEND_UNAVAILABLE,
+        message=(
+            "Solver backend 'parallel_callback' is unavailable: "
+            "callback-parallel backend is not implemented yet."
+        ),
+    )
+
+
+def _solve_with_exact_flow_backend(
+    puzzle_data: PuzzleData,
+    *,
+    options: Mapping[str, object] | None = None,
+    preferred_assignment_by_cell: Mapping[Cell, str] | None = None,
+    avoid_assignment_by_cell: Mapping[Cell, str] | None = None,
+    minimum_mismatches_against_avoid: int | None = None,
+) -> PuzzleSolveResult:
+    """Solve one puzzle instance with the current exact-flow backend."""
+
+    backend = EXACT_FLOW_SOLVER_BACKEND
 
     try:
         preferred_assignment = _freeze_preferred_assignment(
@@ -262,7 +289,7 @@ def solve_puzzle(
             mismatch_count = 0
         return PuzzleSolveResult(
             success=True,
-            backend_name=DEFAULT_SOLVER_BACKEND,
+            backend_name=backend,
             status_code=exact_flow_result.status,
             status_label=SOLVER_STATUS_SOLVED,
             message=success_message,
@@ -316,7 +343,7 @@ def solve_puzzle(
             mismatch_count = len(preferred_assignment) - int(matched_preference_count or 0)
             return PuzzleSolveResult(
                 success=True,
-                backend_name=DEFAULT_SOLVER_BACKEND,
+                backend_name=backend,
                 status_code=fallback_result.status,
                 status_label=SOLVER_STATUS_SOLVED,
                 message=(
@@ -340,7 +367,7 @@ def solve_puzzle(
 
     return PuzzleSolveResult(
         success=exact_flow_result.success,
-        backend_name=DEFAULT_SOLVER_BACKEND,
+        backend_name=backend,
         status_code=exact_flow_result.status,
         status_label=status_label,
         message=message,
@@ -353,13 +380,58 @@ def solve_puzzle(
     )
 
 
+def solve_puzzle(
+    puzzle_data: PuzzleData,
+    *,
+    backend: str = DEFAULT_SOLVER_BACKEND,
+    options: Mapping[str, object] | None = None,
+    preferred_assignment_by_cell: Mapping[Cell, str] | None = None,
+    avoid_assignment_by_cell: Mapping[Cell, str] | None = None,
+    minimum_mismatches_against_avoid: int | None = None,
+) -> PuzzleSolveResult:
+    """Solve one puzzle instance through one supported public backend."""
+
+    if backend not in SUPPORTED_SOLVER_BACKENDS:
+        return _solver_failure(
+            backend_name=backend,
+            status_code=-1,
+            status_label=SOLVER_STATUS_UNSUPPORTED_BACKEND,
+            message=f"Solver backend '{backend}' is not supported.",
+        )
+    if backend == EXACT_FLOW_SOLVER_BACKEND:
+        return _solve_with_exact_flow_backend(
+            puzzle_data,
+            options=options,
+            preferred_assignment_by_cell=preferred_assignment_by_cell,
+            avoid_assignment_by_cell=avoid_assignment_by_cell,
+            minimum_mismatches_against_avoid=minimum_mismatches_against_avoid,
+        )
+    if backend == PARALLEL_CALLBACK_SOLVER_BACKEND:
+        return _solve_with_parallel_callback_backend(
+            puzzle_data,
+            options=options,
+            preferred_assignment_by_cell=preferred_assignment_by_cell,
+            avoid_assignment_by_cell=avoid_assignment_by_cell,
+            minimum_mismatches_against_avoid=minimum_mismatches_against_avoid,
+        )
+    return _solver_failure(
+        backend_name=backend,
+        status_code=-1,
+        status_label=SOLVER_STATUS_UNSUPPORTED_BACKEND,
+        message=f"Solver backend '{backend}' is not supported.",
+    )
+
+
 __all__ = [
     "DEFAULT_SOLVER_BACKEND",
+    "EXACT_FLOW_SOLVER_BACKEND",
+    "PARALLEL_CALLBACK_SOLVER_BACKEND",
     "PuzzleSolveResult",
     "SOLVER_STATUS_BACKEND_UNAVAILABLE",
     "SOLVER_STATUS_ERROR",
     "SOLVER_STATUS_INFEASIBLE",
     "SOLVER_STATUS_SOLVED",
     "SOLVER_STATUS_UNSUPPORTED_BACKEND",
+    "SUPPORTED_SOLVER_BACKENDS",
     "solve_puzzle",
 ]
