@@ -7,20 +7,66 @@ from pathlib import Path
 from galaxy_graph_lab.core import dataset as dataset_module
 from galaxy_graph_lab.core import (
     BoardSpec,
+    CenterSpec,
+    Cell,
+    DATASET_SOLVE_BACKEND_BOTH,
+    DifficultyCalibration,
+    EXACT_FLOW_SOLVER_BACKEND,
     GENERATION_DIFFICULTY_EASY,
     GENERATION_DIFFICULTY_HARD,
     GENERATION_DIFFICULTY_MEDIUM,
+    GalaxyAssignment,
+    PARALLEL_CALLBACK_SOLVER_BACKEND,
     PuzzleGenerationRequest,
+    PuzzleSolveResult,
+    StoredPuzzleInstance,
     difficulty_profile_for,
     generate_dataset,
     generate_instance,
     load_instance,
     save_instance,
     solve_dataset,
+    solve_instance,
 )
 
 
 class DataSetPipelineTests(unittest.TestCase):
+    def _stored_instance(self) -> StoredPuzzleInstance:
+        return StoredPuzzleInstance(
+            instance_id="galaxy_easy_1x1_001",
+            requested_difficulty=GENERATION_DIFFICULTY_EASY,
+            grid_size=BoardSpec(rows=1, cols=1),
+            centers=(CenterSpec.from_coordinates("g0", 0, 0),),
+            generation_seed=0,
+            generation_retry_count=0,
+            center_type_by_center={"g0": "cell"},
+            difficulty_calibration=DifficultyCalibration(
+                requested_difficulty=GENERATION_DIFFICULTY_EASY,
+                measured_difficulty=GENERATION_DIFFICULTY_EASY,
+                measured_score=0.0,
+                board_size_score=0.0,
+                center_count_score=0.0,
+                center_type_score=0.0,
+                domain_overlap_score=0.0,
+                solver_effort_score=0.0,
+                average_domain_overlap=0.0,
+                average_region_irregularity=0.0,
+                average_non_rectangular_irregularity=0.0,
+                max_region_irregularity=0.0,
+                non_rectangular_region_count=0,
+                overlap_within_target=True,
+                irregularity_within_target=True,
+                profile_match=True,
+                message="ok",
+            ),
+        )
+
+    def _single_cell_assignment(self) -> GalaxyAssignment:
+        return GalaxyAssignment(
+            assigned_center_by_cell={Cell(0, 0): "g0"},
+            cells_by_center={"g0": (Cell(0, 0),)},
+        )
+
     def test_generate_instance_can_be_saved_and_loaded(self) -> None:
         request = PuzzleGenerationRequest(
             difficulty=GENERATION_DIFFICULTY_EASY,
@@ -135,6 +181,110 @@ class DataSetPipelineTests(unittest.TestCase):
                 contents = result_path.read_text(encoding="utf-8")
                 self.assertIn("solveTime=", contents)
                 self.assertIn("isOptimal=", contents)
+
+    def test_solve_instance_forwards_selected_backend(self) -> None:
+        instance = self._stored_instance()
+        solve_result = PuzzleSolveResult(
+            success=False,
+            backend_name=PARALLEL_CALLBACK_SOLVER_BACKEND,
+            status_code=-2,
+            status_label="backend_unavailable",
+            message="missing callback solver",
+            assignment=None,
+            objective_value=None,
+            mip_gap=None,
+            mip_node_count=None,
+        )
+
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            data_directory = Path(temporary_directory) / "data"
+            results_directory = Path(temporary_directory) / "res"
+            instance_path = save_instance(instance, data_directory / "galaxy_easy_1x1_001.json")
+
+            with unittest.mock.patch.object(
+                dataset_module,
+                "solve_puzzle",
+                return_value=solve_result,
+            ) as solve_puzzle_mock:
+                record = solve_instance(
+                    instance,
+                    instance_path=instance_path,
+                    results_dir=results_directory,
+                    solver_backend=PARALLEL_CALLBACK_SOLVER_BACKEND,
+                )
+
+        solve_puzzle_mock.assert_called_once()
+        called_puzzle_data = solve_puzzle_mock.call_args.args[0]
+        self.assertEqual(called_puzzle_data.board, instance.puzzle_data.board)
+        self.assertEqual(
+            solve_puzzle_mock.call_args.kwargs["backend"],
+            PARALLEL_CALLBACK_SOLVER_BACKEND,
+        )
+        self.assertEqual(record.solve_result.backend_name, PARALLEL_CALLBACK_SOLVER_BACKEND)
+        self.assertEqual(
+            record.result_path.name,
+            "galaxy_easy_1x1_001__parallel_callback.txt",
+        )
+
+    def test_solve_dataset_can_run_both_backends(self) -> None:
+        instance = self._stored_instance()
+
+        def fake_solve_puzzle(puzzle_data, *, backend, **_kwargs):
+            return PuzzleSolveResult(
+                success=True,
+                backend_name=backend,
+                status_code=1,
+                status_label="solved",
+                message="ok",
+                assignment=self._single_cell_assignment(),
+                objective_value=0.0,
+                mip_gap=0.0,
+                mip_node_count=0,
+            )
+
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            data_directory = Path(temporary_directory) / "data"
+            results_directory = Path(temporary_directory) / "res"
+            save_instance(instance, data_directory / "galaxy_easy_1x1_001.json")
+
+            with unittest.mock.patch.object(
+                dataset_module,
+                "solve_puzzle",
+                side_effect=fake_solve_puzzle,
+            ):
+                solve_result = solve_dataset(
+                    data_dir=data_directory,
+                    results_dir=results_directory,
+                    solver_backend=DATASET_SOLVE_BACKEND_BOTH,
+                )
+
+                self.assertTrue(
+                    solve_result.summary_path is not None
+                    and solve_result.summary_path.exists()
+                )
+
+        self.assertTrue(solve_result.success)
+        self.assertEqual(
+            solve_result.solver_backends,
+            (EXACT_FLOW_SOLVER_BACKEND, PARALLEL_CALLBACK_SOLVER_BACKEND),
+        )
+        self.assertEqual(len(solve_result.records), 2)
+        self.assertEqual(len(solve_result.result_paths), 2)
+        self.assertEqual(
+            {record.solve_result.backend_name for record in solve_result.records},
+            {EXACT_FLOW_SOLVER_BACKEND, PARALLEL_CALLBACK_SOLVER_BACKEND},
+        )
+        self.assertEqual(
+            set(solve_result.average_solve_time_by_backend),
+            {EXACT_FLOW_SOLVER_BACKEND, PARALLEL_CALLBACK_SOLVER_BACKEND},
+        )
+        self.assertEqual(
+            {path.name for path in solve_result.result_paths},
+            {
+                "galaxy_easy_1x1_001__exact_flow.txt",
+                "galaxy_easy_1x1_001__parallel_callback.txt",
+            },
+        )
 
 
 if __name__ == "__main__":

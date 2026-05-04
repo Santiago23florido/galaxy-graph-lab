@@ -5,7 +5,7 @@ from types import MappingProxyType
 
 import pygame
 
-from ..core import generate_puzzle, validate_assignment
+from ..core import DEFAULT_SOLVER_BACKEND, generate_puzzle, validate_assignment
 from .debug_tools import (
     DebugOverlayState,
     comparison_by_cell,
@@ -153,7 +153,11 @@ def build_generated_ui_puzzle(
     )
 
 
-def run_phase_f_app(max_frames: int | None = None) -> None:
+def run_phase_f_app(
+    max_frames: int | None = None,
+    *,
+    solver_backend: str = DEFAULT_SOLVER_BACKEND,
+) -> None:
     """Open the Pygame MVP with a home screen, selector, and board scene."""
 
     pygame.init()
@@ -258,7 +262,7 @@ def run_phase_f_app(max_frames: int | None = None) -> None:
                 tuple(center.id for center in puzzle.puzzle_data.centers)
             )
             debug_state = DebugOverlayState()
-            solver_session = SolverSessionState()
+            solver_session = SolverSessionState(solver_backend=solver_backend)
             validation_result = validate_assignment(
                 puzzle.puzzle_data,
                 game_state.candidate_assignment(),
@@ -616,25 +620,41 @@ def run_phase_f_app(max_frames: int | None = None) -> None:
         pygame.quit()
 
 
-def run_phase_d_app(max_frames: int | None = None) -> None:
+def run_phase_d_app(
+    max_frames: int | None = None,
+    *,
+    solver_backend: str = DEFAULT_SOLVER_BACKEND,
+) -> None:
     """Compatibility wrapper for the previous Phase D entrypoint name."""
 
-    run_phase_f_app(max_frames=max_frames)
+    run_phase_f_app(max_frames=max_frames, solver_backend=solver_backend)
 
 
-def run_phase_b_app(max_frames: int | None = None) -> None:
+def run_phase_b_app(
+    max_frames: int | None = None,
+    *,
+    solver_backend: str = DEFAULT_SOLVER_BACKEND,
+) -> None:
     """Compatibility wrapper for the previous Phase B entrypoint name."""
 
-    run_phase_f_app(max_frames=max_frames)
+    run_phase_f_app(max_frames=max_frames, solver_backend=solver_backend)
 
 
-def run_phase_c_app(max_frames: int | None = None) -> None:
+def run_phase_c_app(
+    max_frames: int | None = None,
+    *,
+    solver_backend: str = DEFAULT_SOLVER_BACKEND,
+) -> None:
     """Compatibility wrapper for the previous Phase C entrypoint name."""
 
-    run_phase_f_app(max_frames=max_frames)
+    run_phase_f_app(max_frames=max_frames, solver_backend=solver_backend)
 
 
-def run_phase_a_app(max_frames: int | None = None) -> None:
+def run_phase_a_app(
+    max_frames: int | None = None,
+    *,
+    solver_backend: str = DEFAULT_SOLVER_BACKEND,
+) -> None:
     """Compatibility wrapper for the previous Phase A entrypoint name."""
 
-    run_phase_f_app(max_frames=max_frames)
+    run_phase_f_app(max_frames=max_frames, solver_backend=solver_backend)

@@ -11,6 +11,7 @@ from galaxy_graph_lab.core import (
     Cell,
     CenterSpec,
     GalaxyAssignment,
+    PARALLEL_CALLBACK_SOLVER_BACKEND,
     PuzzleData,
     PuzzleSolveResult,
     validate_assignment,
@@ -204,6 +205,44 @@ class PhaseFPygameUiTests(unittest.TestCase):
         self.assertEqual(solver_session.solver_message, "Solver unavailable")
         self.assertFalse(solver_session.solution_loaded_into_board)
         self.assertEqual(solver_session.board_mode_label, "manual")
+
+    def test_solver_session_forwards_selected_backend(self) -> None:
+        puzzle_data = PuzzleData.from_specs(
+            BoardSpec(rows=1, cols=1),
+            (CenterSpec.from_coordinates("A", 0, 0),),
+        )
+        solver_session = SolverSessionState(
+            solver_backend=PARALLEL_CALLBACK_SOLVER_BACKEND
+        )
+        callback_result = PuzzleSolveResult(
+            success=False,
+            backend_name=PARALLEL_CALLBACK_SOLVER_BACKEND,
+            status_code=-2,
+            status_label="backend_unavailable",
+            message="Callback backend unavailable",
+            assignment=None,
+            objective_value=None,
+            mip_gap=None,
+            mip_node_count=None,
+        )
+
+        with patch(
+            "galaxy_graph_lab.ui.solver_session.solve_puzzle",
+            return_value=callback_result,
+        ) as solve_puzzle_mock:
+            result = solver_session.request_solution(puzzle_data)
+
+        solve_puzzle_mock.assert_called_once_with(
+            puzzle_data,
+            backend=PARALLEL_CALLBACK_SOLVER_BACKEND,
+            options=None,
+            preferred_assignment_by_cell=None,
+        )
+        self.assertIs(result, callback_result)
+        self.assertEqual(
+            solver_session.solver_backend,
+            PARALLEL_CALLBACK_SOLVER_BACKEND,
+        )
 
     def test_request_solution_for_current_board_loads_a_valid_solver_assignment(self) -> None:
         puzzle_data = PuzzleData.from_specs(

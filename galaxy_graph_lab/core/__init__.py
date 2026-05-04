@@ -3,6 +3,7 @@
 from .board import BoardSpec, Cell
 from .centers import CenterSpec
 from .dataset import (
+    DATASET_SOLVE_BACKEND_BOTH,
     DEFAULT_CPLEX_RESULTS_DIR,
     DEFAULT_DATA_DIR,
     DEFAULT_INSTANCE_SEED_BLOCKS,
@@ -13,6 +14,7 @@ from .dataset import (
     InstanceGenerationResult,
     InstanceSolveResult,
     StoredPuzzleInstance,
+    SUPPORTED_DATASET_SOLVER_BACKENDS,
     generate_dataset,
     generate_instance,
     load_instance,
@@ -116,6 +118,7 @@ __all__ = [
     "CenterPlacementResult",
     "CenterTypeMix",
     "CenterSpec",
+    "DATASET_SOLVE_BACKEND_BOTH",
     "DEFAULT_CPLEX_RESULTS_DIR",
     "DEFAULT_DATA_DIR",
     "DEFAULT_INSTANCE_SEED_BLOCKS",
@@ -166,6 +169,7 @@ __all__ = [
     "SourceFlowKey",
     "StoredPuzzleInstance",
     "SUPPORTED_SOLVER_BACKENDS",
+    "SUPPORTED_DATASET_SOLVER_BACKENDS",
     "AssignmentValidationResult",
     "CandidateAssignment",
     "admissible_cells",

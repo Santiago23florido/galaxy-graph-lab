@@ -21,7 +21,15 @@ from .generation import (
     generate_puzzle,
 )
 from .model_data import PuzzleData
-from .solver_service import PuzzleSolveResult, SOLVER_STATUS_SOLVED, solve_puzzle
+from .solver_service import (
+    DEFAULT_SOLVER_BACKEND,
+    PARALLEL_CALLBACK_SOLVER_BACKEND,
+    EXACT_FLOW_SOLVER_BACKEND,
+    PuzzleSolveResult,
+    SOLVER_STATUS_SOLVED,
+    SUPPORTED_SOLVER_BACKENDS,
+    solve_puzzle,
+)
 from .validators import validate_assignment
 
 
@@ -30,6 +38,10 @@ DEFAULT_CPLEX_RESULTS_DIR = Path("res") / "cplex"
 DEFAULT_GENERATION_RETRIES = 64
 DEFAULT_GENERATION_SEED_SWEEP = 24
 DEFAULT_INSTANCE_SEED_BLOCKS = 16
+DATASET_SOLVE_BACKEND_BOTH = "both"
+SUPPORTED_DATASET_SOLVER_BACKENDS = frozenset(
+    set(SUPPORTED_SOLVER_BACKENDS).union({DATASET_SOLVE_BACKEND_BOTH})
+)
 
 
 def _freeze_mapping(data: Mapping[str, object]) -> Mapping[str, object]:
@@ -63,8 +75,8 @@ def _instance_file_name(
     return f"galaxy_{difficulty}_{_grid_label(board)}_{ordinal:03d}.json"
 
 
-def _result_file_name(instance_id: str) -> str:
-    return f"{instance_id}.txt"
+def _result_file_name(instance_id: str, solver_backend: str) -> str:
+    return f"{instance_id}__{solver_backend}.txt"
 
 
 def _normalize_requested_counts(
@@ -168,6 +180,19 @@ def _average_by_group(values_by_group: Mapping[str, list[float]]) -> Mapping[str
     )
 
 
+def _normalize_dataset_solver_backends(
+    solver_backend: str,
+) -> tuple[str, ...]:
+    if solver_backend == DATASET_SOLVE_BACKEND_BOTH:
+        return (
+            EXACT_FLOW_SOLVER_BACKEND,
+            PARALLEL_CALLBACK_SOLVER_BACKEND,
+        )
+    if solver_backend not in SUPPORTED_SOLVER_BACKENDS:
+        raise ValueError(f"Unsupported dataset solver backend: {solver_backend}.")
+    return (solver_backend,)
+
+
 @dataclass(frozen=True, slots=True)
 class StoredPuzzleInstance:
     """Serialized puzzle instance together with generation metadata."""
@@ -239,8 +264,11 @@ class DataSetSolveResult:
     summary_path: Path | None
     records: tuple[InstanceSolveResult, ...]
     result_paths: tuple[Path, ...]
+    solver_backends: tuple[str, ...]
     average_solve_time_by_difficulty: Mapping[str, float]
     average_solve_time_by_difficulty_and_size: Mapping[str, Mapping[str, float]]
+    average_solve_time_by_backend: Mapping[str, float]
+    average_solve_time_by_backend_and_difficulty: Mapping[str, Mapping[str, float]]
 
 
 def generate_instance(
@@ -503,16 +531,17 @@ def solve_instance(
     *,
     instance_path: str | Path,
     results_dir: str | Path = DEFAULT_CPLEX_RESULTS_DIR,
+    solver_backend: str = DEFAULT_SOLVER_BACKEND,
 ) -> InstanceSolveResult:
     """Solve one stored instance and prepare its cplex-style result artifact."""
 
     source_path = Path(instance_path)
     output_dir = Path(results_dir)
     output_dir.mkdir(parents=True, exist_ok=True)
-    result_path = output_dir / _result_file_name(instance.instance_id)
+    result_path = output_dir / _result_file_name(instance.instance_id, solver_backend)
 
     start_time = time.perf_counter()
-    solve_result = solve_puzzle(instance.puzzle_data)
+    solve_result = solve_puzzle(instance.puzzle_data, backend=solver_backend)
     solve_time = time.perf_counter() - start_time
 
     is_optimal = False
@@ -562,6 +591,7 @@ def solve_dataset(
     *,
     data_dir: str | Path = DEFAULT_DATA_DIR,
     results_dir: str | Path = DEFAULT_CPLEX_RESULTS_DIR,
+    solver_backend: str = DEFAULT_SOLVER_BACKEND,
     clear_existing: bool = True,
 ) -> DataSetSolveResult:
     """Resolve the stored dataset and write one cplex-style text file per instance."""
@@ -569,6 +599,7 @@ def solve_dataset(
     input_dir = Path(data_dir)
     output_dir = Path(results_dir)
     output_dir.mkdir(parents=True, exist_ok=True)
+    selected_solver_backends = _normalize_dataset_solver_backends(solver_backend)
 
     if clear_existing:
         _clear_matching_files(output_dir, "galaxy_*.txt")
@@ -586,30 +617,43 @@ def solve_dataset(
             summary_path=None,
             records=(),
             result_paths=(),
+            solver_backends=selected_solver_backends,
             average_solve_time_by_difficulty=MappingProxyType({}),
             average_solve_time_by_difficulty_and_size=MappingProxyType({}),
+            average_solve_time_by_backend=MappingProxyType({}),
+            average_solve_time_by_backend_and_difficulty=MappingProxyType({}),
         )
 
     records: list[InstanceSolveResult] = []
     times_by_difficulty: dict[str, list[float]] = {}
     times_by_difficulty_and_size: dict[str, dict[str, list[float]]] = {}
+    times_by_backend: dict[str, list[float]] = {}
+    times_by_backend_and_difficulty: dict[str, dict[str, list[float]]] = {}
 
     for instance_path in instance_paths:
         instance = load_instance(instance_path)
-        record = solve_instance(
-            instance,
-            instance_path=instance_path,
-            results_dir=output_dir,
-        )
-        records.append(record)
-        times_by_difficulty.setdefault(record.requested_difficulty, []).append(
-            record.solve_time
-        )
-        size_label = _grid_label(record.grid_size)
-        times_by_difficulty_and_size.setdefault(
-            record.requested_difficulty,
-            {},
-        ).setdefault(size_label, []).append(record.solve_time)
+        for concrete_backend in selected_solver_backends:
+            record = solve_instance(
+                instance,
+                instance_path=instance_path,
+                results_dir=output_dir,
+                solver_backend=concrete_backend,
+            )
+            records.append(record)
+            times_by_difficulty.setdefault(record.requested_difficulty, []).append(
+                record.solve_time
+            )
+            size_label = _grid_label(record.grid_size)
+            times_by_difficulty_and_size.setdefault(
+                record.requested_difficulty,
+                {},
+            ).setdefault(size_label, []).append(record.solve_time)
+            backend_name = record.solve_result.backend_name
+            times_by_backend.setdefault(backend_name, []).append(record.solve_time)
+            times_by_backend_and_difficulty.setdefault(
+                backend_name,
+                {},
+            ).setdefault(record.requested_difficulty, []).append(record.solve_time)
 
     average_solve_time_by_difficulty = _average_by_group(times_by_difficulty)
     average_solve_time_by_difficulty_and_size = _freeze_nested_string_mapping(
@@ -621,14 +665,30 @@ def solve_dataset(
             for difficulty, size_map in times_by_difficulty_and_size.items()
         }
     )
+    average_solve_time_by_backend = _average_by_group(times_by_backend)
+    average_solve_time_by_backend_and_difficulty = _freeze_nested_string_mapping(
+        {
+            backend_name: {
+                difficulty: (sum(values) / len(values))
+                for difficulty, values in difficulty_map.items()
+            }
+            for backend_name, difficulty_map in times_by_backend_and_difficulty.items()
+        }
+    )
 
     summary_path = output_dir / "summary.json"
     summary_payload = {
         "instance_count": len(records),
+        "solver_backends": list(selected_solver_backends),
         "average_solve_time_by_difficulty": dict(average_solve_time_by_difficulty),
         "average_solve_time_by_difficulty_and_size": {
             difficulty: dict(size_map)
             for difficulty, size_map in average_solve_time_by_difficulty_and_size.items()
+        },
+        "average_solve_time_by_backend": dict(average_solve_time_by_backend),
+        "average_solve_time_by_backend_and_difficulty": {
+            backend_name: dict(difficulty_map)
+            for backend_name, difficulty_map in average_solve_time_by_backend_and_difficulty.items()
         },
         "result_files": [record.result_path.name for record in records],
     }
@@ -645,8 +705,11 @@ def solve_dataset(
         summary_path=summary_path,
         records=tuple(records),
         result_paths=tuple(record.result_path for record in records),
+        solver_backends=selected_solver_backends,
         average_solve_time_by_difficulty=average_solve_time_by_difficulty,
         average_solve_time_by_difficulty_and_size=average_solve_time_by_difficulty_and_size,
+        average_solve_time_by_backend=average_solve_time_by_backend,
+        average_solve_time_by_backend_and_difficulty=average_solve_time_by_backend_and_difficulty,
     )
 
 
@@ -656,11 +719,13 @@ __all__ = [
     "DEFAULT_GENERATION_RETRIES",
     "DEFAULT_GENERATION_SEED_SWEEP",
     "DEFAULT_INSTANCE_SEED_BLOCKS",
+    "DATASET_SOLVE_BACKEND_BOTH",
     "DataSetGenerationResult",
     "DataSetSolveResult",
     "InstanceGenerationResult",
     "InstanceSolveResult",
     "StoredPuzzleInstance",
+    "SUPPORTED_DATASET_SOLVER_BACKENDS",
     "generate_dataset",
     "generate_instance",
     "load_instance",

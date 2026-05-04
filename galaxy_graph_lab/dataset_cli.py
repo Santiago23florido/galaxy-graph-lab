@@ -4,14 +4,17 @@ import argparse
 from pathlib import Path
 
 from .core import (
+    DATASET_SOLVE_BACKEND_BOTH,
     DEFAULT_CPLEX_RESULTS_DIR,
     DEFAULT_DATA_DIR,
+    DEFAULT_SOLVER_BACKEND,
     DEFAULT_INSTANCE_SEED_BLOCKS,
     DEFAULT_GENERATION_RETRIES,
     DEFAULT_GENERATION_SEED_SWEEP,
     GENERATION_DIFFICULTY_EASY,
     GENERATION_DIFFICULTY_HARD,
     GENERATION_DIFFICULTY_MEDIUM,
+    SUPPORTED_SOLVER_BACKENDS,
     generate_dataset,
     solve_dataset,
 )
@@ -105,6 +108,17 @@ def _build_parser() -> argparse.ArgumentParser:
         default=DEFAULT_CPLEX_RESULTS_DIR,
         help="Directory where cplex-style result files will be written.",
     )
+    solve_parser.add_argument(
+        "--solver-backend",
+        default=DEFAULT_SOLVER_BACKEND,
+        choices=(
+            tuple(sorted(SUPPORTED_SOLVER_BACKENDS))
+            + (DATASET_SOLVE_BACKEND_BOTH,)
+        ),
+        help=(
+            "Solve with one backend or run both backends over every stored instance."
+        ),
+    )
 
     return parser
 
@@ -139,6 +153,7 @@ def main() -> None:
         result = solve_dataset(
             data_dir=args.data_dir,
             results_dir=args.results_dir,
+            solver_backend=args.solver_backend,
         )
         if not result.success:
             raise SystemExit(result.message)
@@ -146,8 +161,14 @@ def main() -> None:
         print(result.message)
         print(f"resultsDir={result.results_dir}")
         print(f"summary={result.summary_path}")
+        print(f"solverBackends={','.join(result.solver_backends)}")
+        for backend_name, average_time in result.average_solve_time_by_backend.items():
+            print(f"{backend_name}AverageSolveTime={average_time:.6f}")
         for difficulty, average_time in result.average_solve_time_by_difficulty.items():
             print(f"{difficulty}AverageSolveTime={average_time:.6f}")
+        for backend_name, difficulty_map in result.average_solve_time_by_backend_and_difficulty.items():
+            for difficulty, average_time in difficulty_map.items():
+                print(f"{backend_name}.{difficulty}AverageSolveTime={average_time:.6f}")
         return
 
     raise SystemExit(f"Unknown command: {args.command}")
