@@ -1,11 +1,131 @@
 \section{Methodology}
 
-This section should explain how the mathematical model is mapped to code. It is
-the right place to document:
+It is therefore necessary to translate the mathematical model described above into a practical implementation capable of encoding the geometric and combinatorial constraints of the puzzle. This implementation connects the formal formulation with a discrete software representation of the board, graph-based data structures, structural validation procedures, exact MILP formulations, and a constructive generation pipeline.
 
-\begin{itemize}
-\item the solver strategy,
-\item the graph data structures,
-\item the Pygame interface responsibilities, and
-\item the validation workflow used during development.
-\end{itemize}
+The puzzle is represented as an exact discrete board with precise coordinates. From this representation, the symmetry-aware geometric operators, admissible domains, kernel cells, and orthogonal adjacency graph are derived. These objects are then compiled into a cached instance representation that serves as the shared semantic basis for validators, MILP builders, solver services, generation routines, certification logic, difficulty calibration, and persistence tooling.
+
+\subsection{Discrete Domain and Geometric Invariants}
+
+The board is represented as a finite set of cells implemented through the \texttt{Cell} structure, which corresponds to the computational realization of the discrete atom denoted in the mathematical model as a board cell. This object is immutable and orderable, ensuring that cells can be handled consistently across the different components of the implementation.
+
+The second element of this discretization is \texttt{BoardSpec}. This structure does not merely define the dimensions \(N\) and \(M\); rather, it specifies the finite support on which the set of cells is defined. In addition, for the validation of the model constraints, it is important to fix a deterministic traversal of this cell set. For this reason, through \texttt{iter\_cells()} and \texttt{cells()}, \texttt{BoardSpec} defines a canonical enumeration of all cells in the board.
+
+Each center has a geometric position, which is the information used, as described in the mathematical constraints, to determine symmetries, admissible domains, and galaxy kernels. This information is stored in \texttt{CenterSpec}. It is also important to note that the coordinates are not stored as floating-point values. Instead, they are represented as integer coordinates on a doubled lattice. This representation is fundamental because a center may lie inside a cell, on an edge, or on a vertex, and this affects the way numerical comparisons interact with kernel construction and admissible cells under rotation.
+
+The doubled lattice converts integer and half-integer coordinates into a single exact integer system. This eliminates rounding errors and ensures that all subsequent geometric operations are fully deterministic.
+
+\subsection{Geometric Operators and Symmetry Primitives}
+
+The function \texttt{tau()} is implemented to represent the discrete rotation operator around a center in the exact doubled-coordinate system. The function \texttt{twin\_cell()} lifts this purely geometric transformation into a board-aware operation by returning the rotated cell only when its image remains inside the board, and returning \texttt{None} otherwise.
+
+The functions \texttt{is\_admissible\_cell()} and \texttt{admissible\_cells()} construct the complete set of cells that can belong to the galaxy associated with a given center. Similarly, \texttt{is\_kernel\_cell()} and \texttt{kernel\_cells()} encode the mandatory incidence structure around the center, thereby translating the geometric containment condition of the mathematical model into deterministic software procedures.
+
+\subsection{Graph Representation and Cached Puzzle State}
+
+The board abstraction is implemented as a graph in order to provide a software realization of the orthogonal adjacency structure defined in the mathematical model. This is achieved through the \texttt{GridGraph} class. The method \texttt{build\_neighbors()} computes the neighbor map for every cell only once, while \texttt{\_build\_edges()} derives the corresponding undirected edge set. In addition, methods such as \texttt{induced\_neighbors()}, \texttt{traverse\_component()}, \texttt{connected\_components()}, and \texttt{is\_connected()} provide the rest of the codebase with a uniform and executable notion of connectedness.
+
+The structure \texttt{PuzzleData} is then defined as the internal compiled representation of the entire puzzle instance. It computes the canonical tuple of cells, records the ordered tuple of centers, builds the \texttt{GridGraph}, stores a read-only view of the neighborhood relation, and precomputes, for every center, its admissible domain, its kernel cells, and its twin map. Consequently, \texttt{PuzzleData} acts as the shared semantic layer from which validation routines, optimization models, solver interfaces, and generation procedures operate.
+
+\subsection{Structural Validation Layer}
+An executable predicate logic is implemented to validate the satisfaction of the game rules independently from the optimization solver. This validation layer is mainly used by the generator, which requires a mechanism to reject invalid structures before attempting to compute a solution with the solver. It also serves as a second validation stage for solver outputs, ensuring that the returned assignments satisfy the structural requirements of the puzzle. The function \texttt{\_prepare\_assignment()} defines the normalization boundary of the validator logic. It receives external assignment representations, converts them into a canonical internal form, verifies that all cells and center identifiers are known, and ensures that downstream predicates operate only on well-formed data.
+
+The predicate \texttt{partition\_is\_valid()} checks the exact-cover condition and forbids overlaps between galaxies. In addition, the predicates \texttt{admissibility\_is\_valid()}, \texttt{symmetry\_is\_valid()}, \texttt{kernel\_is\_valid()}, and \texttt{connectivity\_is\_valid()} validate, respectively, admissibility, rotational symmetry, kernel containment, and side-connectivity. Finally, \texttt{validate\_assignment()} aggregates all these checks into an \texttt{AssignmentValidationResult}. This design preserves diagnostic information for each rule instead of reducing the validation process to a single Boolean value, thereby making invalid assignments easier to analyze, debug, and reject during generation or certification.
+
+\subsection{MILP}
+
+The main purpose is to represent the local and assignment-level rules of the puzzle as sparse linear algebra over binary variables. For this reason, the constraint set is separated into two components: the constraints that can be expressed directly through local linear relations, and the connectivity constraints, which require a more elaborate global formulation.
+
+\subsubsection{Base}
+
+The central abstraction in this phase is \texttt{BaseMilpModel}, since it encapsulates the translation of the base mathematical model into a form that can be solved by \texttt{SciPy}. The method \texttt{BaseMilpModel.from\_puzzle\_data()} begins by fixing a canonical ordering for the binary variables \(x_{u,g}\), creating one variable for each pair \((\texttt{cell}, \texttt{center.id})\). This design decision directly determines the column ordering of the solver decision vector. From this point on, each family of constraints is not constructed immediately as a complete matrix, but rather as a collection of sparse rows. Each row is represented by a triplet \((\texttt{columns}, \texttt{coefficients}, \texttt{target\_value})\), where \texttt{columns} specifies the positions of the variables with nonzero coefficients, \texttt{coefficients} stores the corresponding coefficient values, and \texttt{target\_value} represents the right-hand side of the equation.
+
+For example, the partition rows implement Eq.~\eqref{eq:unique_assignment} by
+placing coefficient \(1\) in every column associated with the same cell \(u\)
+across all centers and by setting the target value equal to \(1\). Similarly,
+the symmetry rows implement Eq.~\eqref{eq:rotational_symmetry_binary} by using
+exactly two columns, corresponding to \(x_{u,g}\) and
+\(x_{\tau_g(u),g}\), with coefficients \(1\) and \(-1\), respectively. In the
+same way, the inadmissibility and kernel rows are sparse one-variable
+equalities implementing Eqs.~\eqref{eq:invalid_assignment} and
+\eqref{eq:kernel_assignment_binary}. Consequently, the mathematical
+constraints introduced in Eqs.~\eqref{eq:unique_assignment}--\eqref{eq:kernel_assignment_binary}
+are not redefined in software; instead, they are rewritten row by row in a
+matrix-oriented format.
+
+The method \texttt{\_build\_exact\_constraint()} takes this row-wise representation and converts it into a global sparse matrix \(A\), which is first assembled in COO format and then converted to CSC format. In parallel, the method constructs the right-hand-side vector \(b\). Finally, it creates the object \texttt{LinearConstraint(matrix, rhs\_vector, rhs\_vector)}. In the \texttt{SciPy} interface, this imposes
+
+\begin{equation}
+b \leq A x \leq b,
+\label{eq:scipy_linear_constraint_bounds}
+\end{equation}
+
+which is equivalent to the exact equality constraint
+
+\begin{equation}
+A x = b.
+\label{eq:exact_linear_system}
+\end{equation}
+
+In this way, the mathematical notation of the model is systematically translated into a sparse matrix structure that can be directly consumed by the MILP solver.
+
+\subsubsection{Flow}
+
+In the flow-based model, the central idea is to extend the base formulation so that it not only decides which cell belongs to which center, but also certifies that each resulting galaxy is connected. While the base model only uses binary variables \(x_{u,g}\), where each variable indicates whether cell \(u\) is assigned to center \(g\), the flow model introduces additional variables representing circulation over the board adjacency graph.
+
+From an implementation perspective, \texttt{FlowMilpModel} takes an already constructed \texttt{BaseMilpModel} as its starting point and extends its decision vector with two new families of variables. The first family corresponds to directed flow variables \(f_{g,u,v}\), which represent the amount of flow sent from cell \(u\) to a neighboring cell \(v\) inside the galaxy associated with center \(g\). The second family corresponds to source-flow variables \(s_{g,k}\), which represent the flow injected from an artificial source into the kernel cells \(k\) of each galaxy. Therefore, the solver decision vector no longer contains only cell-center assignment variables, but also internal flow variables and source-injection variables.
+
+The translation to \texttt{SciPy} follows the same sparse matrix logic used in the base model. The existing constraints over the variables \(x_{u,g}\) are not rebuilt. Instead, they are expanded with zero-valued columns by means of \texttt{\_expand\_constraint()}, so that they remain valid within the extended decision vector. Additional sparse rows are then introduced to encode the flow constraints.
+
+The arc-capacity rows implement Eqs.~\eqref{eq:flow_capacity_origin} and
+\eqref{eq:flow_capacity_destination}. In implementation terms, each row couples
+one directed flow variable with one assignment variable so that flow can
+circulate only between cells that are active in the same galaxy. Analogously,
+the source-capacity rows implement Eq.~\eqref{eq:source_capacity}, forcing
+source injection to occur only through kernel cells.
+
+The key structural block is the cell-wise balance encoded from
+Eq.~\eqref{eq:flow_balance}. For each center and each cell, the implementation
+builds one sparse row containing all incoming directed-flow variables with
+coefficient \(+1\), the source-flow variable with coefficient \(+1\) when the
+cell belongs to the kernel, all outgoing directed-flow variables with
+coefficient \(-1\), and finally the assignment variable \(x_{u,g}\) with
+coefficient \(-1\). The target value of that row is \(0\), which reproduces the
+equality structure of Eq.~\eqref{eq:flow_balance}. In the same way, one
+additional row per center implements the total source-supply condition given in
+Eq.~\eqref{eq:source_supply} by balancing the total injected source flow
+against the total number of cells assigned to that galaxy.
+
+At the interface level, the equalities inherited from the base model and the
+flow-balance equalities are converted into \texttt{LinearConstraint} objects by
+\texttt{\_build\_exact\_constraint()}, while the capacity inequalities are
+assembled by \texttt{\_build\_upper\_bound\_constraint()}, which imposes a
+constraint of the form \(Az \leq u\) through lower bounds equal to
+\(-\infty\) and finite upper bounds. Taken together, the rows implementing
+Eqs.~\eqref{eq:flow_capacity_origin}, \eqref{eq:flow_capacity_destination},
+\eqref{eq:source_capacity}, \eqref{eq:flow_balance}, and
+\eqref{eq:source_supply} transform connectivity into an algebraic property of
+the optimization model: a disconnected region cannot receive flow consistently
+from its kernel and is therefore automatically excluded from the feasible
+solution set.
+
+\subsection{Constructive Generation}
+The approach then moves from estimating a solution for a particular puzzle instance to generating the instance itself in a structured and policy-aware manner. This process relies on exact certification to confirm that the final instance is mathematically sound.
+
+A generation policy is defined through \texttt{PuzzleGenerationRequest}, which specifies the type of puzzle instance to be generated. This request includes the main generation parameters: the desired difficulty level, the board size, the random seed, and the maximum number of generation attempts. The construction begins with the placement of centers through a subdivision of the board into rectangular regions. The central abstraction in this stage is \texttt{RectangleRegion}, which stores a single rectangle and can derive its area, dimensions, cell set, parity pattern, center type, and corresponding \texttt{CenterSpec}. The process starts from a single rectangle corresponding to the entire board. Then, \texttt{place\_candidate\_centers()} recursively refines this initial region until a target number of regions is reached. This target number is not fixed; it is determined by \texttt{sample\_target\_center\_count()} according to the selected \texttt{DifficultyProfile}.
+
+Once several candidate configurations have been generated, the algorithm does not select one uniformly at random. Instead, each candidate is first evaluated through \texttt{\_candidate\_score()}. This score considers several criteria, including how well the induced partition matches the target mixture of center types, how balanced or regular the regions are, how reasonable the spatial separation between regions is, and how suitable the resulting scaffold is for the desired difficulty profile.
+
+The function \texttt{\_choose\_split\_candidate()} then applies a stochastic selection strategy over the best-ranked candidates. In other words, the procedure first filters and scores the candidate configurations, and then selects among the strongest alternatives using controlled randomness. The process starts from an already valid constructive assignment, in which each region still essentially coincides with its original rectangle, and seeks to transform some of these regions into non-rectangular shapes that are more interesting from the perspective of difficulty. To achieve this, the procedure does not modify isolated cells. Instead, it operates on symmetry orbits, that is, pairs of cells that must be moved together in order to preserve the \(180^\circ\) rotational symmetry around the corresponding center. Based on this principle, the module iterates over admissible cells of a candidate region, constructs their associated orbits, discards those that already belong entirely to the region, removes those that would affect protected kernel cells, and excludes those that do not maintain local contact with the region. It also verifies that the enlarged region remains connected.
+
+Among the orbits that survive this filtering stage, the algorithm assigns a score combining several criteria: how much the orbit moves the region toward the target irregularity defined by the difficulty profile, how much it expands the bounding box of the region, how far it lies from the geometric center of the region, how many new cells it moves outside the base rectangle, and how strongly it reinforces local adjacency. The algorithm then selects stochastically among the best-ranked options and applies the ownership transfer, updating both the owner of each affected cell and the cell set of each region. This process is repeated only over a subset of regions selected according to the difficulty profile, and with an intensity that is also controlled by that profile. Consequently, at low difficulty levels, this deformation step may be absent or highly limited, whereas at higher difficulty levels, the generator attempts to deform more regions and reach greater levels of irregularity. The final result is not imposed directly as the definitive puzzle solution. Instead, it is converted into a guide for the exact solver: on the one hand, the new preferred assignments are recorded; on the other hand, rectangular assignments that should be avoided are identified. The objective is for the final certified solution to preserve the mathematical validity of the model while adopting a less trivial morphology that is better aligned with the desired difficulty level.
+
+\subsubsection{Validation and Calibration}
+
+The generated result is not treated as a final solution. Instead, the existence of a valid solution for the generated instance is verified in the same way as for any puzzle instance solved by the game engine. After this certification step, a difficulty-validation stage is applied in order to confirm that the instance satisfies the requirements associated with the prescribed difficulty level. The system implements an abstract difficulty label that is associated with several generation and validation criteria. These criteria include how many centers the puzzle should contain, what proportion of centers should lie inside cells, on edges, or on vertices, how much overlap is allowed between admissible domains, how much geometric irregularity is desired, how many non-rectangular regions must appear at minimum, and whether uniqueness or greater structural difficulty should be enforced. The calibration logic extracts a multi-factor description of the instance. It measures the board size, the number of centers, the center-type composition, the overlap between admissible domains, the geometric irregularity of the certified regions, and the computational effort required by the solver. The function \texttt{region\_irregularity()} is central in this process because it measures how far a region is from saturating its bounding box, making it a practical proxy for distinguishing regular rectangular galaxies from more intricate ones.
+
+The function \texttt{\_solver\_effort\_score()} incorporates backend metadata, such as node count and whether guided solving was used. Consequently, computational effort also becomes part of the operational notion of difficulty. The resulting score is compared against the expectations of the active difficulty profile and is then mapped back to a difficulty label. This turns calibration into a feedback loop between the intended generation policy and the observed certified behavior. Without this step, difficulty labels would only describe what the generator attempted to create, rather than what the final certified instance actually exhibits.
+
+\subsection{Dataset and persistence layer}
+An instance representation and architecture are provided to support subsequent batch-processing workflows. The central serialized object is \texttt{StoredPuzzleInstance}, which stores not only the board and its centers, but also the metadata associated with the generation process and the difficulty-calibration measurements. Therefore, it contains sufficient information to explain both the structure of the puzzle and the way in which it was classified. The function \texttt{generate\_instance()} wraps repeated seeded attempts into a single callable generation routine. In turn, \texttt{generate\_dataset()} scales the same logic across multiple board sizes and difficulty labels, producing a manifest that describes the resulting corpus.
+
+On the solving side, \texttt{solve\_instance()} solves a stored puzzle through the canonical exact solver and exports compact diagnostic information. Similarly, \texttt{solve\_dataset()} iterates this process over an entire dataset while aggregating timing and status information. In this way, the dataset layer acts as a bridge between the core reasoning machinery of the system and empirical workflows, enabling reproducible generation, certification, calibration, and large-scale evaluation of puzzle instances.
