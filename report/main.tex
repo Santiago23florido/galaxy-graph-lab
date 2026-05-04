@@ -9,21 +9,39 @@
 \usepackage{hyperref}
 \hypersetup{hidelinks}
 
-\title{Galaxy Graph Lab: IEEE Report Skeleton}
+\title{A Graph-Based Mixed-Integer Formulation for Spiral Galaxies and Center-Guided Region Partitioning}
 \author{
 \IEEEauthorblockN{Santiago Florido Gomez}
-\IEEEauthorblockA{Galaxy Graph Lab\\
-Paris, France}
+\IEEEauthorblockA{\textit{RO203, Dipl\^ome d'ing\'enieur}\\
+\textit{ENSTA Paris}\\
+Palaiseau, France\\
+santiago.florido@ensta.fr}
+\and
+\IEEEauthorblockN{Jose Daniel Chacon Gomez}
+\IEEEauthorblockA{\textit{RO203, Dipl\^ome d'ing\'enieur}\\
+\textit{ENSTA Paris}\\
+Palaiseau, France\\
+jose-daniel.chacon@ensta.fr}
 }
 
 \begin{document}
-necesit
 \maketitle
 
 \begin{abstract}
-This document defines the IEEE-style report structure for Galaxy Graph Lab.
-It is intended as the starting point for documenting the graph model,
-constraint formulation, implementation decisions, and validation results.
+This paper presents the development of a graph-based exact formulation for the
+\textit{Spiral Galaxies} puzzle and studies its relevance as a model for
+center-guided connected region partitioning. The board is represented as a grid
+graph in which each feasible galaxy is defined as a connected region assigned
+to a unique center and constrained by admissibility and central symmetry. The
+resulting problem is formulated as a mixed-integer linear model combining
+binary assignment variables with flow-based constraints to enforce
+connectivity. Beyond the mathematical model, the project includes a Python
+implementation of the solver, validation tools for feasibility checks, dataset
+support for puzzle instances, and a Pygame interface for interactive
+visualization and experimentation. The article describes the modeling choices,
+the software architecture used to translate the formulation into code, and the
+role of this framework as a compact case study in exact discrete optimization
+with geometric priors.
 \end{abstract}
 
 \begin{IEEEkeywords}
@@ -37,9 +55,26 @@ graph theory, constraint solving, puzzle modeling, pygame
 \input{sections/05_conclusion.tex}
 
 \begin{thebibliography}{00}
-\bibitem{pygame}
-Pygame Community, ``Pygame documentation.'' [Online]. Available:
-\url{https://www.pygame.org/docs/}
+\bibitem{fertin2015}
+G. Fertin, S. Jamshidi, and C. Komusiewicz, ``Towards an algorithmic guide to Spiral Galaxies,'' \emph{Theoretical Computer Science}, vol. 586, pp. 26--39, 2015, doi: 10.1016/j.tcs.2015.01.051.
+
+\bibitem{shi2000}
+J. Shi and J. Malik, ``Normalized Cuts and Image Segmentation,'' \emph{IEEE Transactions on Pattern Analysis and Machine Intelligence}, vol. 22, no. 8, pp. 888--905, 2000, doi: 10.1109/34.868688.
+
+\bibitem{validi2022}
+H. Validi, A. Buchanan, and E. Lykhovyd, ``Imposing Contiguity Constraints in Political Districting Models,'' \emph{Operations Research}, vol. 70, no. 2, pp. 867--892, 2022, doi: 10.1287/opre.2021.2141.
+
+\bibitem{miyazawa2021}
+F. K. Miyazawa, P. F. S. Moura, M. J. Ota, and Y. Wakabayashi, ``Partitioning a graph into balanced connected classes: Formulations, separation and experiments,'' \emph{European Journal of Operational Research}, vol. 293, no. 3, pp. 826--836, 2021, doi: 10.1016/j.ejor.2020.12.059.
+
+\bibitem{sun2012}
+Y. Sun and B. Bhanu, ``Reflection symmetry-integrated image segmentation,'' \emph{IEEE Transactions on Pattern Analysis and Machine Intelligence}, vol. 34, no. 9, pp. 1827--1841, 2012, doi: 10.1109/TPAMI.2011.259.
+
+\bibitem{gorelick2017}
+L. Gorelick, O. Veksler, Y. Boykov, and C. Nieuwenhuis, ``Convexity Shape Prior for Binary Segmentation,'' \emph{IEEE Transactions on Pattern Analysis and Machine Intelligence}, vol. 39, no. 2, pp. 258--271, 2017, doi: 10.1109/TPAMI.2016.2547399.
+
+\bibitem{dey2024}
+N. Dey, S. M. Abulnaga, B. Billot, E. A. Turk, P. E. Grant, A. V. Dalca, and P. Golland, ``AnyStar: Domain Randomized Universal Star-Convex 3D Instance Segmentation,'' in \emph{Proceedings of the IEEE/CVF Winter Conference on Applications of Computer Vision (WACV)}, 2024, doi: 10.1109/WACV57701.2024.00742.
 \end{thebibliography}
 
 \end{document}
