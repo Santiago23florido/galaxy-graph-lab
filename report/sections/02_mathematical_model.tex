@@ -1,3 +1,332 @@
 \section{Mathematical Model}
 
 In order to define the problem to be modeled in a clear and mathematically precise way, it is first necessary to establish the rules of the game and describe the dynamics of each instance. This provides the basis for subsequently formulating the constraints that enforce those rules and give rise to the optimization system solved for each instance.
+
+\subsection{Combinatorial Rules of a Valid Spiral Galaxies Instance}
+
+The \textit{Spiral Galaxies} puzzle is defined on a rectangular grid of unit
+cells together with a set of prescribed galaxy centers \cite{fertin2015}. A
+valid solution must satisfy the following rules:
+
+\begin{itemize}
+\item Each cell must be assigned to exactly one galaxy. The set of galaxies
+therefore forms an exact partition of the board.
+
+\item Each galaxy is associated with one prescribed center. A center may lie in
+the interior of a cell, on the midpoint of an edge, or on a grid vertex.
+
+\item Each galaxy must contain its own center. If the center lies on a cell, an
+edge, or a vertex, then the corresponding incident one, two, or four cells must
+belong to that galaxy.
+
+\item Each galaxy must be connected under orthogonal adjacency. Any two cells
+of the same galaxy must be linked by a path of side-adjacent cells belonging to
+that same region.
+
+\item Each galaxy must be invariant under a rotation of $180^\circ$ around its
+center. Thus, whenever a cell belongs to a galaxy, its rotated counterpart must
+also belong to that galaxy whenever the rotated position remains inside the
+board.
+\end{itemize}
+
+Taken together, these conditions define the game as a partitioning problem on a
+discrete domain with center incidence, connectivity, and central symmetry
+constraints. This rule set provides the basis for the mathematical formulation
+introduced next.
+
+\subsection{Combinatorial and Geometric Modeling}
+
+The universe of cells composing the board is defined in order to obtain a discrete representation of the playing domain. Let
+
+\begin{equation}
+\mathcal{U} := [N] \times [M].
+\label{eq:cell_universe}
+\end{equation}
+
+In Eq.~\ref{eq:cell_universe}, \(N\) denotes the number of rows, \(M\) denotes the number of columns, and \([N] \times [M]\) represents the set of all ordered pairs \((i,j)\) such that \(1 \leq i \leq N\) and \(1 \leq j \leq M\).
+
+Orthogonal adjacency is modeled through the grid graph
+
+\begin{equation}
+\mathcal{H} = (\mathcal{U}, \mathcal{E}), 
+\qquad 
+\mathcal{E} := \left\{ \{u,v\} \subseteq \mathcal{U} : \|u-v\|_{1} = 1 \right\}.
+\label{eq:grid_graph}
+\end{equation}
+
+In Eq.~\ref{eq:grid_graph}, \(\mathcal{H}\) denotes the grid graph, \(\mathcal{U}\) is the set of nodes, and \(\mathcal{E}\) is the set of edges. The term \(\|u-v\|_{1}\) represents the Manhattan distance between cells \(u\) and \(v\). Therefore, the condition \(\|u-v\|_{1}=1\) indicates that the two cells share one side. The connectivity of each galaxy is defined precisely over the graph described in Eq.~\ref{eq:grid_graph}.
+
+The centers associated with the galaxies encode the geometric prior of the system and are modeled as follows:
+
+\begin{equation}
+\begin{aligned}
+\mathcal{G} &:= \{1,2,\ldots,k\}, \\
+L(g) &= (a_g,b_g), \\
+a_g &\in \left\{1,\tfrac{3}{2},2,\tfrac{5}{2},\ldots,N\right\}, \\
+b_g &\in \left\{1,\tfrac{3}{2},2,\tfrac{5}{2},\ldots,M\right\}.
+\end{aligned}
+\label{eq:galaxy_centers}
+\end{equation}
+
+In Eq.~\ref{eq:galaxy_centers}, \(k\) denotes the total number of centers, \(g\) indexes a specific center, and \(L(g)\) represents the geometric position of center \(g\). The quantities \(a_g\) and \(b_g\) denote its vertical and horizontal coordinates, respectively. Integer coordinates indicate that the center lies inside a cell, whereas half-integer coordinates indicate that the center lies on an edge or on a vertex of the grid.
+
+The need therefore arises to define the rotational geometry within each region into which the domain is partitioned. This makes it possible to express the symmetry constraint of the game in a natural and mathematically precise way. For this purpose, the \(180^\circ\) rotation around center \(g\) induces the operator
+
+\begin{equation}
+\tau_g(i,j) := \left(2a_g - i,\; 2b_g - j\right).
+\label{eq:rotation_operator}
+\end{equation}
+
+In Eq.~\ref{eq:rotation_operator}, \((i,j)\) denotes the original cell, while \(\tau_g(i,j)\) denotes its symmetric counterpart with respect to center \(g\). The term \(2a_g-i\) reflects the row coordinate with respect to the center, and \(2b_g-j\) reflects the column coordinate with respect to the center. The symmetry of a galaxy is therefore enforced by requiring that, if a cell belongs to the galaxy associated with center \(g\), then its image under the operator \(\tau_g\) must also belong to that same galaxy.
+
+Not all cells can belong to a given galaxy, since their symmetric counterpart may lie outside the board. In this context, it is necessary to define the admissible domain associated with each center. Thus,
+
+\begin{equation}
+\mathcal{U}_g := \left\{ u \in \mathcal{U} : \tau_g(u) \in \mathcal{U} \right\}.
+\label{eq:admissible_domain}
+\end{equation}
+
+In Eq.~\ref{eq:admissible_domain}, \(\mathcal{U}_g\) denotes the set of cells that are admissible for center \(g\). Therefore, \(u \in \mathcal{U}_g\) means that both cell \(u\) and its symmetric counterpart \(\tau_g(u)\) lie within the board.
+
+Considering the kernel as the set of mandatory cells geometrically associated with center \(g\), the kernel of center \(g\) is defined as
+
+\begin{equation}
+K(g) :=
+\left\{
+(i,j) \in \mathcal{U} :
+i \in \left\{\lfloor a_g \rfloor, \lceil a_g \rceil\right\},
+\;
+j \in \left\{\lfloor b_g \rfloor, \lceil b_g \rceil\right\}
+\right\}.
+\label{eq:center_kernel}
+\end{equation}
+
+In Eq.~\ref{eq:center_kernel}, \(K(g)\) denotes the kernel associated with center \(g\). The operator \(\lfloor a_g \rfloor\) represents the lower integer part of \(a_g\), while \(\lceil a_g \rceil\) represents its upper integer part. The same interpretation applies analogously to \(b_g\).
+
+The cardinality of \(K(g)\) depends on the geometric position of the center. If \(a_g,b_g \in \mathbb{Z}\), then \(|K(g)|=1\). If exactly one coordinate is half-integer, then \(|K(g)|=2\). If both coordinates are half-integers, then \(|K(g)|=4\). If \(X_g\) is a connected and \(180^\circ\)-symmetric region that geometrically contains the center \(L(g)\), then
+
+\begin{equation}
+K(g) \subseteq X_g.
+\label{eq:kernel_inclusion}
+\end{equation}
+
+In Eq.~\ref{eq:kernel_inclusion}, \(X_g\) denotes the galaxy associated with center \(g\), and \(K(g) \subseteq X_g\) means that all cells in the kernel are mandatory.
+
+This allows a combinatorial definition of a valid solution for a given instance of the game \cite{fertin2015}. A solution of the puzzle is a family of sets \(\{X_g\}_{g \in \mathcal{G}}\) satisfying
+
+\begin{equation}
+\bigcup_{g \in \mathcal{G}} X_g = \mathcal{U},
+\label{eq:coverage_constraint}
+\end{equation}
+
+\begin{equation}
+X_g \cap X_h = \emptyset 
+\qquad \forall g,h \in \mathcal{G}, \; g \neq h,
+\label{eq:disjointness_constraint}
+\end{equation}
+
+\begin{equation}
+K(g) \subseteq X_g 
+\qquad \forall g \in \mathcal{G},
+\label{eq:kernel_constraint}
+\end{equation}
+
+\begin{equation}
+u \in X_g \Rightarrow \tau_g(u) \in X_g
+\qquad \forall g \in \mathcal{G}, \; \forall u \in X_g,
+\label{eq:symmetry_constraint}
+\end{equation}
+
+\begin{equation}
+\mathcal{H}[X_g] \text{ is connected}
+\qquad \forall g \in \mathcal{G}.
+\label{eq:connectivity_constraint}
+\end{equation}
+
+Eq.~\ref{eq:coverage_constraint} states that all cells of the board must be covered. Eq.~\ref{eq:disjointness_constraint} ensures that no cell belongs to two distinct galaxies. Eq.~\ref{eq:kernel_constraint} enforces the geometric containment of the corresponding center. Eq.~\ref{eq:symmetry_constraint} imposes the rotational symmetry condition. Finally, \(\mathcal{H}[X_g]\) denotes the subgraph of \(\mathcal{H}\) induced by \(X_g\), and Eq.~\ref{eq:connectivity_constraint} enforces side-connectivity for each galaxy.
+
+\subsection{MILP with Binary Variables Formulation}
+
+In order to implement the combinatorial model described above, it is necessary to introduce binary variables that represent both the assignment structure of a game instance and the state of its constraints. Thus, the binary variables are defined as
+
+\begin{equation}
+x_{u,g} \in \{0,1\}
+\qquad
+\forall u \in \mathcal{U}, \; \forall g \in \mathcal{G}.
+\label{eq:binary_variables}
+\end{equation}
+
+The assignment semantics of these variables is given by
+
+\begin{equation}
+x_{u,g} =
+\begin{cases}
+1, & \text{if } u \text{ is assigned to center } g,\\
+0, & \text{otherwise.}
+\end{cases}
+\label{eq:binary_variable_semantics}
+\end{equation}
+
+In Eq.~\ref{eq:binary_variable_semantics}, \(x_{u,g}=1\) denotes an active assignment, whereas \(x_{u,g}=0\) indicates that cell \(u\) is not assigned to center \(g\).
+
+Each cell of the board must be assigned exclusively to exactly one center. This condition is imposed by the constraint
+
+\begin{equation}
+\sum_{g \in \mathcal{G}} x_{u,g} = 1
+\qquad
+\forall u \in \mathcal{U}.
+\label{eq:unique_assignment}
+\end{equation}
+
+In Eq.~\ref{eq:unique_assignment}, the term \(\sum_{g \in \mathcal{G}} x_{u,g}\) aggregates all possible assignments of cell \(u\) over the set of centers. The value \(1\) on the right-hand side enforces a unique assignment for each cell.
+
+To perform this assignment consistently, it is necessary to define the validity of the image of a cell with respect to a particular center. If a cell does not have a valid symmetric counterpart with respect to center \(g\), then it cannot belong to the corresponding galaxy. This condition is expressed as
+
+\begin{equation}
+x_{u,g} = 0
+\qquad
+\forall g \in \mathcal{G}, \; \forall u \in \mathcal{U} \setminus \mathcal{U}_g.
+\label{eq:invalid_assignment}
+\end{equation}
+
+In Eq.~\ref{eq:invalid_assignment}, \(\mathcal{U} \setminus \mathcal{U}_g\) denotes the set of cells whose symmetric counterpart lies outside the board with respect to center \(g\). Therefore, the constraint eliminates assignments that are geometrically infeasible.
+
+The rotational symmetry condition is imposed through the constraint
+
+\begin{equation}
+x_{u,g} = x_{\tau_g(u),g}
+\qquad
+\forall g \in \mathcal{G}, \; \forall u \in \mathcal{U}_g.
+\label{eq:rotational_symmetry_binary}
+\end{equation}
+
+In Eq.~\ref{eq:rotational_symmetry_binary}, \(x_{u,g}\) represents the membership of cell \(u\) in the galaxy associated with center \(g\), while \(x_{\tau_g(u),g}\) represents the membership of its symmetric counterpart. The equality enforces that both cells are either included in or excluded from the same galaxy simultaneously.
+
+Since the cells in the kernel must necessarily belong to the galaxy associated with their corresponding center, this requirement must be explicitly enforced within the model. This is expressed as
+
+\begin{equation}
+x_{u,g} = 1
+\qquad
+\forall g \in \mathcal{G}, \; \forall u \in K(g).
+\label{eq:kernel_assignment_binary}
+\end{equation}
+
+In Eq.~\ref{eq:kernel_assignment_binary}, \(K(g)\) denotes the set of cells incident to center \(g\). Setting the corresponding variables equal to \(1\) fixes all kernel cells inside the galaxy associated with center \(g\).
+
+To enforce connectivity, a flow-based formulation is introduced for each galaxy \cite{miyazawa2021,validi2022}. Let \(\overrightarrow{\mathcal{E}}\) denote the directed version of the edge set \(\mathcal{E}\), obtained by replacing each undirected edge \(\{u,v\}\in\mathcal{E}\) with the two directed arcs \((u,v)\) and \((v,u)\). For each center \(g\), an artificial source node \(s_g\) is connected to the cells in the kernel \(K(g)\). The corresponding arc set is defined as
+
+\begin{equation}
+\mathcal{A}_g :=
+\overrightarrow{\mathcal{E}}
+\cup
+\left\{(s_g,u): u \in K(g)\right\}.
+\label{eq:flow_arc_set}
+\end{equation}
+
+A nonnegative flow variable is then associated with each arc used to connect the galaxy:
+
+\begin{equation}
+F^g_a \geq 0
+\qquad
+\forall g \in \mathcal{G}, \; \forall a \in \mathcal{A}_g.
+\label{eq:flow_variables}
+\end{equation}
+
+In Eq.~\ref{eq:flow_variables}, \(F^g_a\) denotes the amount of flow sent through arc \(a\) in order to connect the galaxy associated with center \(g\).
+
+Let
+
+\begin{equation}
+n := |\mathcal{U}| = NM.
+\label{eq:number_cells}
+\end{equation}
+
+In Eq.~\ref{eq:number_cells}, \(n\) denotes the total number of cells in the board and provides a valid upper bound for the flow variables. For each directed arc \((u,v)\in\overrightarrow{\mathcal{E}}\), the following capacity constraints are imposed:
+
+\begin{equation}
+F^g_{u,v} \leq n x_{u,g}
+\qquad
+\forall g \in \mathcal{G}, \; \forall (u,v)\in\overrightarrow{\mathcal{E}},
+\label{eq:flow_capacity_origin}
+\end{equation}
+
+\begin{equation}
+F^g_{u,v} \leq n x_{v,g}
+\qquad
+\forall g \in \mathcal{G}, \; \forall (u,v)\in\overrightarrow{\mathcal{E}}.
+\label{eq:flow_capacity_destination}
+\end{equation}
+
+In Eqs.~\ref{eq:flow_capacity_origin} and \ref{eq:flow_capacity_destination}, \(F^g_{u,v}\) represents the flow sent from cell \(u\) to cell \(v\). These constraints activate an arc only when both endpoint cells belong to the galaxy associated with center \(g\).
+
+The capacity of the arcs leaving the artificial source is defined as
+
+\begin{equation}
+F^g_{s_g,u} \leq n x_{u,g}
+\qquad
+\forall g \in \mathcal{G}, \; \forall u \in K(g).
+\label{eq:source_capacity}
+\end{equation}
+
+In Eq.~\ref{eq:source_capacity}, \(F^g_{s_g,u}\) denotes the flow entering a kernel cell from the artificial source. If \(x_{u,g}=0\), no flow can be sent through the corresponding source arc. Let \(\delta^+(u)\) and \(\delta^-(u)\) denote the sets of outgoing and incoming arcs of cell \(u\) in \(\overrightarrow{\mathcal{E}}\), respectively.
+
+Each selected cell must consume one net unit of flow. This condition is imposed by the flow-balance constraint
+
+\begin{equation}
+\begin{aligned}
+& \sum_{a\in\delta^-(u)} F^g_a
+  + \mathbf{1}_{\{u\in K(g)\}} F^g_{s_g,u}
+  - \sum_{a\in\delta^+(u)} F^g_a \\
+& \qquad = x_{u,g},
+\qquad \forall g \in \mathcal{G},\ \forall u \in \mathcal{U}.
+\end{aligned}
+\label{eq:flow_balance}
+\end{equation}
+
+In Eq.~\ref{eq:flow_balance}, the first summation represents the flow entering cell \(u\) from adjacent cells, while the second summation represents the flow leaving \(u\) toward adjacent cells. The term \(\mathbf{1}_{\{u\in K(g)\}}\) is an indicator function equal to \(1\) when \(u\in K(g)\) and equal to \(0\) otherwise. The right-hand side \(x_{u,g}\) forces each cell assigned to galaxy \(g\) to absorb exactly one unit of flow.
+
+Finally, the total amount of flow emitted by the artificial source must be equal to the number of cells assigned to the corresponding galaxy:
+
+\begin{equation}
+\sum_{u\in K(g)} F^g_{s_g,u}
+=
+\sum_{u\in\mathcal{U}} x_{u,g}
+\qquad
+\forall g \in \mathcal{G}.
+\label{eq:source_supply}
+\end{equation}
+
+In Eq.~\ref{eq:source_supply}, the left-hand side represents the total flow emitted from the artificial source associated with center \(g\), whereas the right-hand side gives the total number of cells assigned to that galaxy. This equality ensures that every selected cell is reachable from the kernel through active arcs, thereby enforcing connectivity.
+
+\subsection{Feasibility Interpretation and Complete MILP}
+
+The \textit{Spiral Galaxies} puzzle is not, in its original form, a genuine
+optimization problem. Rather, it is a combinatorial feasibility problem: the
+goal is to determine whether there exists an assignment of cells to centers
+that satisfies coverage, admissibility, symmetry, kernel inclusion, and
+connectivity simultaneously. For compatibility with standard MILP solvers, the
+problem is therefore written in equivalent optimization form with a null
+objective function.
+
+Using the notation introduced above, the complete MILP can then be written as
+
+\begin{subequations}
+\label{eq:complete_feasibility_milp}
+\begin{align}
+\min \quad & 0 \label{eq:complete_feasibility_milp_obj}\\
+\text{s.t.}\quad
+& \eqref{eq:unique_assignment},\ \eqref{eq:invalid_assignment}, \notag\\
+& \eqref{eq:rotational_symmetry_binary},\ \eqref{eq:kernel_assignment_binary}, \notag\\
+& \eqref{eq:flow_capacity_origin},\ \eqref{eq:flow_capacity_destination}, \notag\\
+& \eqref{eq:source_capacity},\ \eqref{eq:flow_balance},\ \eqref{eq:source_supply}, \notag\\
+& \eqref{eq:binary_variables},\ \eqref{eq:flow_variables}.
+\label{eq:complete_feasibility_milp_constraints}
+\end{align}
+\end{subequations}
+
+Thus, any feasible solution satisfying
+Eq.~\eqref{eq:complete_feasibility_milp_obj} together with the constraint set
+referenced in Eq.~\eqref{eq:complete_feasibility_milp_constraints} defines a
+valid solution of the puzzle. Conversely, if the model is infeasible, then the
+corresponding game instance admits no valid decomposition under the imposed
+rules.
