@@ -1,12 +1,11 @@
 \section{Introduction}
 
-Galaxy Graph Lab studies graph-based representations for structured puzzles and
-constraint-driven search. This report follows the standard IEEE conference
-layout so the project can grow into a technical paper without restructuring the
-document later.
+Partitioning a discrete domain into regions subject to a prescribed topological geometry, with unique centers that must be contained within each region, requires that every subregion be connected. In addition, imposing a central symmetry constraint constitutes the basic problem structure underlying the \textit{Spiral Galaxies} puzzle \cite{fertin2015}. However, this formulation is not limited to the puzzle itself; rather, it represents a broader scientific problem with considerable academic interest.
 
-The current implementation baseline includes a Python package, a Pygame entry
-point, and a reporting workspace for documenting the mathematical formulation
-and the experimental results. The software stack is described together with the
-report skeleton so that implementation and documentation evolve in the same
-repository.
+From a modeling perspective, this places the project at the intersection of graph theory, computational geometry, and mixed-integer optimization. Once the board is represented as a grid graph, each feasible galaxy can be interpreted as a connected subset of vertices anchored at a single center and closed under a symmetry operator. Problems of this kind extend well beyond recreational puzzles. Graph partitioning with connectivity constraints appears, for instance, in image segmentation, where pixels or superpixels are grouped into coherent regions on an adjacency graph \cite{shi2000}. Related contiguity-constrained partitioning also appears in political districting \cite{validi2022}. More generally, connected graph partitioning is a well-studied NP-hard family of problems with applications in image processing, cluster analysis, robotics, and operating systems \cite{miyazawa2021}.
+
+More specifically, the complete structure of the \textit{Spiral Galaxies} problem is particularly relevant to the separation of touching cell nuclei in histopathological or microscopy images \cite{dey2024}. In this setting, one starts from a binary foreground mask containing several adjacent or overlapping nuclei, together with an estimate of their centers. The objective is to divide this mask into individual instances, assigning one connected region to each detected center. This shares the same structural principle as the galaxy problem, except that, in this biomedical context, exact central symmetry is not an intrinsic requirement of each instance, even though symmetry cues and shape priors can still improve segmentation quality \cite{sun2012,gorelick2017}.
+
+Under this interpretation, each cell can be modeled as a galaxy, the image grid corresponds to the puzzle board, and the detected nuclear centroids play the role of the puzzle centers. Solving the partitioning problem is therefore equivalent to reconstructing a valid decomposition of the foreground into connected and geometrically regular regions, each associated with a unique center.
+
+Consequently, the project is useful not only as a playable application, but also as a compact case study for evaluating how geometric priors can be encoded as linear constraints and how exact optimization solvers can recover globally valid region decompositions.
