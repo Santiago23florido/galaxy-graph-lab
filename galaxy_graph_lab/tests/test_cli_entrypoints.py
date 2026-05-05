@@ -7,6 +7,7 @@ from types import SimpleNamespace
 from unittest.mock import patch
 
 from galaxy_graph_lab.core import (
+    BoardSpec,
     EXACT_FLOW_SOLVER_BACKEND,
     PARALLEL_CALLBACK_SOLVER_BACKEND,
 )
@@ -76,6 +77,91 @@ class CliEntrypointTests(unittest.TestCase):
             data_dir=unittest.mock.ANY,
             results_dir=unittest.mock.ANY,
             solver_backend="both",
+        )
+
+    def test_generate_dataset_uses_fixed_size_window_without_threshold_search(self) -> None:
+        generation_result = SimpleNamespace(
+            success=True,
+            message="Dataset generated successfully.",
+            data_dir=Path("/tmp/data"),
+            manifest_path=Path("/tmp/data/manifest.json"),
+            instances_by_difficulty={"easy": 100, "medium": 100, "hard": 100},
+        )
+
+        with patch.object(sys, "argv", ["dataset-cli", "generate-dataset"]):
+            with patch(
+                "galaxy_graph_lab.dataset_cli.generate_dataset",
+                return_value=generation_result,
+            ) as generate_dataset_mock:
+                with patch("builtins.print"):
+                    dataset_cli_main()
+
+        generate_dataset_mock.assert_called_once()
+        kwargs = generate_dataset_mock.call_args.kwargs
+        self.assertEqual(kwargs["selection_solver_backend"], EXACT_FLOW_SOLVER_BACKEND)
+        self.assertEqual(kwargs["dataset_instance_min_solve_time_seconds"], 0.0)
+        self.assertEqual(
+            kwargs["dimensions_by_difficulty"]["easy"],
+            (
+                BoardSpec(rows=7, cols=7),
+                BoardSpec(rows=8, cols=8),
+                BoardSpec(rows=9, cols=9),
+                BoardSpec(rows=10, cols=10),
+                BoardSpec(rows=11, cols=11),
+            ),
+        )
+        self.assertEqual(
+            kwargs["dimensions_by_difficulty"]["medium"],
+            kwargs["dimensions_by_difficulty"]["easy"],
+        )
+        self.assertEqual(
+            kwargs["dimensions_by_difficulty"]["hard"],
+            kwargs["dimensions_by_difficulty"]["easy"],
+        )
+
+    def test_find_hard_threshold_cli_forwards_search_parameters(self) -> None:
+        threshold_result = SimpleNamespace(
+            success=True,
+            message="Hard-threshold search completed.",
+            threshold_seconds=0.5,
+            solver_backend=EXACT_FLOW_SOLVER_BACKEND,
+            max_solved_grid_size=BoardSpec(rows=13, cols=13),
+            max_solved_solve_time=0.3,
+            first_exceeding_grid_size=BoardSpec(rows=14, cols=14),
+            first_exceeding_solve_time=0.8,
+        )
+
+        with patch.object(
+            sys,
+            "argv",
+            [
+                "dataset-cli",
+                "find-hard-threshold",
+                "--threshold-seconds",
+                "0.5",
+                "--start-side",
+                "7",
+                "--max-side",
+                "20",
+            ],
+        ):
+            with patch(
+                "galaxy_graph_lab.dataset_cli.find_hard_threshold_limit",
+                return_value=threshold_result,
+            ) as search_mock:
+                with patch("builtins.print"):
+                    dataset_cli_main()
+
+        search_mock.assert_called_once_with(
+            threshold_seconds=0.5,
+            solver_backend=EXACT_FLOW_SOLVER_BACKEND,
+            start_side=7,
+            max_side=20,
+            max_generation_retries=unittest.mock.ANY,
+            seed_sweep=unittest.mock.ANY,
+            seed_block_count=unittest.mock.ANY,
+            base_seed=None,
+            progress_callback=unittest.mock.ANY,
         )
 
     def test_dataset_cli_forwards_single_solver_backend_mode(self) -> None:

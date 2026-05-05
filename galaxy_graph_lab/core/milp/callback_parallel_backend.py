@@ -1,26 +1,14 @@
 from __future__ import annotations
 
 from collections.abc import Mapping, Sequence
-from dataclasses import dataclass
-from typing import Any
+from time import perf_counter
 
+import numpy as np
 from scipy.optimize import LinearConstraint
+from scipy.sparse import coo_array
 
 from ..model_data import PuzzleData
-from .callback_parallel_model import (
-    CallbackParallelMilpModel,
-    CallbackParallelProblemPayload,
-    CallbackParallelSolveResult,
-)
-
-
-@dataclass(slots=True)
-class _CallbackProgressState:
-    """Mutable progress snapshot populated from the external solver callback."""
-
-    mip_node_count: int | None = None
-    best_objective_value: float | None = None
-    best_bound: float | None = None
+from .callback_parallel_model import CallbackParallelMilpModel, CallbackParallelSolveResult
 
 
 def _resolve_thread_count(options: Mapping[str, object] | None) -> int:
@@ -71,94 +59,201 @@ def _resolve_mip_gap(options: Mapping[str, object] | None) -> float | None:
     return None
 
 
-def _cplex_linear_rows(
-    payload: CallbackParallelProblemPayload,
-) -> tuple[list[list[list[int] | list[float]]], str, list[float]]:
-    lin_expr: list[list[list[int] | list[float]]] = []
-    senses: list[str] = []
-    rhs: list[float] = []
+def _internal_solver_options(
+    options: Mapping[str, object] | None,
+) -> Mapping[str, object] | None:
+    if options is None:
+        return None
 
-    for row in payload.constraint_rows:
-        lin_expr.append([list(row.columns), list(row.coefficients)])
-        senses.append(row.sense)
-        rhs.append(row.rhs)
+    # Keep the public option surface stable even though the backend is internal.
+    _resolve_thread_count(options)
+    time_limit = _resolve_time_limit(options)
+    mip_gap = _resolve_mip_gap(options)
 
-    return lin_expr, "".join(senses), rhs
+    internal_options: dict[str, object] = {}
+    if time_limit is not None:
+        internal_options["time_limit"] = time_limit
+    if mip_gap is not None:
+        internal_options["mip_rel_gap"] = mip_gap
+    return internal_options or None
 
 
-def _register_progress_callback(
-    cplex_model: Any,
-    cplex_module: Any,
-) -> _CallbackProgressState:
-    progress = _CallbackProgressState()
-
-    callback_namespace = getattr(cplex_module, "callbacks", None)
-    mip_info_callback = None if callback_namespace is None else getattr(
-        callback_namespace, "MIPInfoCallback", None
+def _base_result_to_callback_result(
+    result,
+) -> CallbackParallelSolveResult:
+    assignment_variable_values = getattr(
+        result,
+        "assignment_variable_values",
+        getattr(result, "variable_values", None),
     )
-    if mip_info_callback is None:
-        return progress
-
-    class ProgressCallback(mip_info_callback):
-        def __call__(self) -> None:  # pragma: no cover - depends on external backend
-            try:
-                progress.mip_node_count = int(self.get_num_nodes())
-            except Exception:
-                pass
-            try:
-                if self.has_incumbent():
-                    progress.best_objective_value = float(
-                        self.get_incumbent_objective_value()
-                    )
-            except Exception:
-                pass
-            try:
-                progress.best_bound = float(self.get_best_objective_value())
-            except Exception:
-                pass
-
-    cplex_model.register_callback(ProgressCallback)
-    return progress
+    directed_flow_values = getattr(result, "directed_flow_values", None)
+    source_flow_values = getattr(result, "source_flow_values", None)
+    return CallbackParallelSolveResult(
+        success=result.success,
+        status=result.status,
+        message=result.message,
+        objective_value=result.objective_value,
+        mip_gap=result.mip_gap,
+        mip_node_count=result.mip_node_count,
+        assignment=result.assignment,
+        assignment_variable_values=assignment_variable_values,
+        directed_flow_values=directed_flow_values,
+        source_flow_values=source_flow_values,
+    )
 
 
-def _extract_solution_details(
-    cplex_model: Any,
-    progress: _CallbackProgressState,
-) -> tuple[bool, int, str, tuple[float, ...] | None, float | None, float | None, int | None]:
-    solution = cplex_model.solution
-    status = int(solution.get_status())
-    message = str(solution.get_status_string())
+def _assignment_is_connected(
+    model: CallbackParallelMilpModel,
+    assignment,
+) -> bool:
+    for center in model.puzzle_data.centers:
+        selected_cells = assignment.cells_by_center[center.id]
+        if not model.puzzle_data.graph.is_connected(selected_cells):
+            return False
+    return True
 
-    values: tuple[float, ...] | None = None
-    objective_value: float | None = None
-    mip_gap: float | None = None
-    mip_node_count: int | None = progress.mip_node_count
 
-    success = False
-    try:
-        success = bool(solution.is_primal_feasible())
-    except Exception:
-        success = False
+def _solution_exclusion_constraint(
+    num_variables: int,
+    variable_values: Sequence[float],
+) -> LinearConstraint:
+    """Exclude one exact 0/1 assignment so the base MILP must try another one."""
 
-    if success:
-        values = tuple(float(value) for value in solution.get_values())
-        try:
-            objective_value = float(solution.get_objective_value())
-        except Exception:
-            objective_value = progress.best_objective_value
+    if len(variable_values) != num_variables:
+        raise ValueError("Solution vector length does not match the callback model.")
 
-    try:
-        mip_gap = float(solution.MIP.get_mip_relative_gap())
-    except Exception:
-        mip_gap = None
+    columns = list(range(num_variables))
+    coefficients: list[float] = []
+    selected_count = 0.0
+    for value in variable_values:
+        is_selected = float(value) >= 0.5
+        coefficients.append(1.0 if is_selected else -1.0)
+        if is_selected:
+            selected_count += 1.0
 
-    if mip_node_count is None:
-        try:
-            mip_node_count = int(solution.progress.get_num_nodes_processed())
-        except Exception:
-            mip_node_count = None
+    matrix = coo_array(
+        (
+            np.asarray(coefficients, dtype=float),
+            (
+                np.zeros(num_variables, dtype=int),
+                np.asarray(columns, dtype=int),
+            ),
+        ),
+        shape=(1, num_variables),
+    ).tocsc()
+    return LinearConstraint(
+        matrix,
+        -np.inf,
+        np.asarray([selected_count - 1.0], dtype=float),
+    )
 
-    return success, status, message, values, objective_value, mip_gap, mip_node_count
+
+def _remaining_internal_options(
+    base_options: Mapping[str, object] | None,
+    *,
+    started_at: float,
+) -> Mapping[str, object] | None:
+    internal_options = dict(base_options or {})
+    raw_time_limit = internal_options.get("time_limit")
+    if raw_time_limit is None:
+        return internal_options or None
+
+    time_limit = float(raw_time_limit)
+    remaining = time_limit - (perf_counter() - started_at)
+    if remaining <= 0.0:
+        remaining = 1e-6
+    internal_options["time_limit"] = remaining
+    return internal_options
+
+
+def _finalize_loop_result(
+    result: CallbackParallelSolveResult,
+    *,
+    rejected_incumbent_count: int,
+    accumulated_node_count: int | None,
+) -> CallbackParallelSolveResult:
+    message = result.message
+    if rejected_incumbent_count > 0:
+        if result.success:
+            message = (
+                "Connected solution found after rejecting "
+                f"{rejected_incumbent_count} disconnected incumbent(s). "
+                f"{result.message}"
+            )
+        elif "infeasible" in result.message.lower():
+            message = (
+                "The base MILP became infeasible after excluding "
+                f"{rejected_incumbent_count} disconnected incumbent(s). "
+                f"{result.message}"
+            )
+        else:
+            message = (
+                "The callback-style connectivity loop stopped after rejecting "
+                f"{rejected_incumbent_count} disconnected incumbent(s). "
+                f"{result.message}"
+            )
+
+    return CallbackParallelSolveResult(
+        success=result.success,
+        status=result.status,
+        message=message,
+        objective_value=result.objective_value,
+        mip_gap=result.mip_gap,
+        mip_node_count=accumulated_node_count,
+        assignment=result.assignment,
+        assignment_variable_values=result.assignment_variable_values,
+        directed_flow_values=result.directed_flow_values,
+        source_flow_values=result.source_flow_values,
+    )
+
+
+def _solve_internal_base_with_connectivity_rejections(
+    model: CallbackParallelMilpModel,
+    *,
+    options: Mapping[str, object] | None,
+    objective: Sequence[float] | None,
+    extra_constraints: Sequence[LinearConstraint],
+) -> CallbackParallelSolveResult:
+    """Repeat the base MILP until one incumbent is connected on the grid graph."""
+
+    accumulated_constraints = list(extra_constraints)
+    rejected_incumbent_count = 0
+    accumulated_node_count = 0
+    saw_node_count = False
+    started_at = perf_counter()
+
+    while True:
+        base_result = model.base_model.solve(
+            options=_remaining_internal_options(options, started_at=started_at),
+            objective=objective,
+            extra_constraints=tuple(accumulated_constraints),
+        )
+        if base_result.mip_node_count is not None:
+            accumulated_node_count += int(base_result.mip_node_count)
+            saw_node_count = True
+
+        callback_result = _base_result_to_callback_result(base_result)
+        if not callback_result.success or callback_result.assignment is None:
+            return _finalize_loop_result(
+                callback_result,
+                rejected_incumbent_count=rejected_incumbent_count,
+                accumulated_node_count=accumulated_node_count if saw_node_count else None,
+            )
+
+        if _assignment_is_connected(model, callback_result.assignment):
+            return _finalize_loop_result(
+                callback_result,
+                rejected_incumbent_count=rejected_incumbent_count,
+                accumulated_node_count=accumulated_node_count if saw_node_count else None,
+            )
+
+        rejected_incumbent_count += 1
+        accumulated_constraints.append(
+            _solution_exclusion_constraint(
+                model.num_variables,
+                callback_result.assignment_variable_values or (),
+            )
+        )
 
 
 def solve_callback_parallel_model(
@@ -168,74 +263,16 @@ def solve_callback_parallel_model(
     objective: Sequence[float] | None = None,
     extra_constraints: Sequence[LinearConstraint] = (),
 ) -> CallbackParallelSolveResult:
-    """Solve one exact-flow model instance through an external callback backend."""
-
-    import cplex
+    """Solve the base MILP and reject disconnected incumbents by graph validation."""
 
     if isinstance(model, PuzzleData):
         model = CallbackParallelMilpModel.from_puzzle_data(model)
 
-    payload = model.build_payload(
+    return _solve_internal_base_with_connectivity_rejections(
+        model,
+        options=_internal_solver_options(options),
         objective=objective,
         extra_constraints=extra_constraints,
-    )
-
-    cplex_model = cplex.Cplex()
-    cplex_model.objective.set_sense(cplex_model.objective.sense.minimize)
-    cplex_model.set_results_stream(None)
-    cplex_model.set_log_stream(None)
-    cplex_model.set_warning_stream(None)
-    cplex_model.set_error_stream(None)
-
-    thread_count = _resolve_thread_count(options)
-    if thread_count > 0:
-        cplex_model.parameters.threads.set(thread_count)
-
-    time_limit = _resolve_time_limit(options)
-    if time_limit is not None:
-        cplex_model.parameters.timelimit.set(time_limit)
-
-    mip_gap = _resolve_mip_gap(options)
-    if mip_gap is not None:
-        cplex_model.parameters.mip.tolerances.mipgap.set(mip_gap)
-
-    cplex_model.variables.add(
-        obj=list(payload.objective),
-        lb=list(payload.lower_bounds),
-        ub=list(payload.upper_bounds),
-        types="".join(payload.variable_types),
-        names=list(payload.variable_names),
-    )
-
-    lin_expr, senses, rhs = _cplex_linear_rows(payload)
-    if lin_expr:
-        cplex_model.linear_constraints.add(
-            lin_expr=lin_expr,
-            senses=senses,
-            rhs=rhs,
-        )
-
-    progress = _register_progress_callback(cplex_model, cplex)
-    cplex_model.solve()
-
-    (
-        success,
-        status,
-        message,
-        values,
-        objective_value,
-        mip_gap_value,
-        mip_node_count,
-    ) = _extract_solution_details(cplex_model, progress)
-
-    return model.result_from_variable_values(
-        success=success,
-        status=status,
-        message=message,
-        variable_values=values,
-        objective_value=objective_value,
-        mip_gap=mip_gap_value,
-        mip_node_count=mip_node_count,
     )
 
 

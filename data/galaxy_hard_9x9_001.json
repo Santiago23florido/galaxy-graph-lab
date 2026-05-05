@@ -2,92 +2,98 @@
   "center_type_by_center": {
     "g0": "edge",
     "g1": "edge",
+    "g10": "vertex",
     "g2": "cell",
-    "g3": "cell",
-    "g4": "cell",
-    "g5": "vertex",
-    "g6": "vertex",
-    "g7": "edge",
-    "g8": "vertex",
+    "g3": "edge",
+    "g4": "vertex",
+    "g5": "edge",
+    "g6": "cell",
+    "g7": "vertex",
+    "g8": "cell",
     "g9": "edge"
   },
   "centers": [
     {
-      "col_coord2": 1,
+      "col_coord2": 3,
       "id": "g0",
       "row_coord2": 2
     },
     {
-      "col_coord2": 5,
+      "col_coord2": 9,
       "id": "g1",
       "row_coord2": 2
     },
     {
-      "col_coord2": 10,
+      "col_coord2": 14,
       "id": "g2",
       "row_coord2": 2
     },
     {
-      "col_coord2": 14,
+      "col_coord2": 0,
       "id": "g3",
-      "row_coord2": 2
-    },
-    {
-      "col_coord2": 16,
-      "id": "g4",
-      "row_coord2": 2
+      "row_coord2": 7
     },
     {
       "col_coord2": 3,
+      "id": "g4",
+      "row_coord2": 7
+    },
+    {
+      "col_coord2": 6,
       "id": "g5",
       "row_coord2": 7
     },
     {
-      "col_coord2": 9,
+      "col_coord2": 12,
       "id": "g6",
-      "row_coord2": 7
-    },
-    {
-      "col_coord2": 14,
-      "id": "g7",
-      "row_coord2": 7
+      "row_coord2": 8
     },
     {
       "col_coord2": 3,
-      "id": "g8",
-      "row_coord2": 13
+      "id": "g7",
+      "row_coord2": 11
     },
     {
-      "col_coord2": 12,
+      "col_coord2": 10,
+      "id": "g8",
+      "row_coord2": 14
+    },
+    {
+      "col_coord2": 15,
       "id": "g9",
-      "row_coord2": 13
+      "row_coord2": 14
+    },
+    {
+      "col_coord2": 3,
+      "id": "g10",
+      "row_coord2": 15
     }
   ],
   "difficulty_calibration": {
-    "average_domain_overlap": 0.39207671957671963,
-    "average_non_rectangular_irregularity": 0.2222222222222222,
-    "average_region_irregularity": 0.04444444444444444,
-    "board_size_score": 1.0,
-    "center_count_score": 0.8,
+    "average_domain_overlap": 0.3513636363636364,
+    "average_non_rectangular_irregularity": 0.1333333333333333,
+    "average_region_irregularity": 0.012121212121212118,
+    "board_size_score": 0.5,
+    "center_count_score": 0.9,
     "center_type_score": 0.6,
-    "domain_overlap_score": 0.39207671957671963,
-    "irregularity_within_target": true,
-    "max_region_irregularity": 0.2222222222222222,
+    "domain_overlap_score": 0.3513636363636364,
+    "irregularity_within_target": false,
+    "max_region_irregularity": 0.1333333333333333,
     "measured_difficulty": "hard",
-    "measured_score": 0.6691596632351612,
-    "message": "Difficulty calibration matched the requested profile.",
-    "non_rectangular_region_count": 2,
+    "measured_score": 0.5979076901679012,
+    "message": "Difficulty calibration mismatch: requested hard, measured hard, overlap=0.351, non_rectangular_regions=1, non_rectangular_irregularity=0.133.",
+    "non_rectangular_region_count": 1,
     "overlap_within_target": true,
-    "profile_match": true,
+    "profile_match": false,
     "requested_difficulty": "hard",
-    "solver_effort_score": 0.10348155298653298
+    "solver_effort_score": 0.10203144713355672
   },
-  "generation_retry_count": 12,
-  "generation_seed": 436667963,
+  "generation_retry_count": 3,
+  "generation_seed": 142417266,
   "grid_size": {
     "cols": 9,
     "rows": 9
   },
-  "instance_id": "galaxy_hard_9x9_001",
+  "instance_id": "reference_hard_9x9",
   "requested_difficulty": "hard"
 }

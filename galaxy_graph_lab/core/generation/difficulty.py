@@ -13,6 +13,7 @@ from .profiles import (
     CENTER_TYPE_EDGE,
     CENTER_TYPE_VERTEX,
     DifficultyProfile,
+    difficulty_profile_for,
 )
 from .request import (
     GENERATION_DIFFICULTY_EASY,
@@ -58,9 +59,29 @@ def region_irregularity(cells: Collection[Cell]) -> float:
     return 1.0 - (len(cells) / bounding_box_area)
 
 
-def _board_size_score(puzzle_data: PuzzleData) -> float:
+def _board_size_score(
+    puzzle_data: PuzzleData,
+    requested_profile: DifficultyProfile,
+) -> float:
+    areas = sorted(
+        {
+            grid_size.rows * grid_size.cols
+            for grid_size in requested_profile.allowed_grid_sizes
+        }
+    )
+    if not areas:
+        return 0.5
+    if len(areas) == 1:
+        # When dataset generation fixes one non-canonical size per run,
+        # board size should not dominate the measured difficulty by itself.
+        return 0.5
+
     area = puzzle_data.board.rows * puzzle_data.board.cols
-    return _clamp01((area - 25.0) / (81.0 - 25.0))
+    min_area = float(areas[0])
+    max_area = float(areas[-1])
+    if max_area <= min_area:
+        return 0.5
+    return _clamp01((area - min_area) / (max_area - min_area))
 
 
 def _center_count_score(puzzle_data: PuzzleData) -> float:
@@ -74,7 +95,7 @@ def _center_type_score(center_type_by_center: Mapping[str, str]) -> float:
     )
 
 
-def _domain_overlap_score(puzzle_data: PuzzleData) -> float:
+def average_domain_overlap(puzzle_data: PuzzleData) -> float:
     center_ids = tuple(center.id for center in puzzle_data.centers)
     overlaps: list[float] = []
 
@@ -168,10 +189,10 @@ def calibrate_generated_puzzle_difficulty(
 ) -> DifficultyCalibration:
     """Measure and classify one certified puzzle against the requested profile."""
 
-    board_size_score = _board_size_score(puzzle_data)
+    board_size_score = _board_size_score(puzzle_data, requested_profile)
     center_count_score = _center_count_score(puzzle_data)
     center_type_score = _center_type_score(center_type_by_center)
-    domain_overlap_score = _domain_overlap_score(puzzle_data)
+    domain_overlap_score = average_domain_overlap(puzzle_data)
     solver_effort_score = _solver_effort_score(puzzle_data, solve_result)
 
     measured_score = (
@@ -218,8 +239,19 @@ def calibrate_generated_puzzle_difficulty(
             )
         )
 
-    profile_match = (
+    canonical_allowed_grid_sizes = set(
+        difficulty_profile_for(requested_profile.difficulty).allowed_grid_sizes
+    )
+    is_single_size_noncanonical_profile = (
+        len(set(requested_profile.allowed_grid_sizes)) == 1
+        and requested_profile.allowed_grid_sizes[0] not in canonical_allowed_grid_sizes
+    )
+    difficulty_bucket_matches = (
         measured_difficulty == requested_profile.difficulty
+        or is_single_size_noncanonical_profile
+    )
+    profile_match = (
+        difficulty_bucket_matches
         and overlap_within_target
         and irregularity_within_target
     )
@@ -259,6 +291,7 @@ def calibrate_generated_puzzle_difficulty(
 
 __all__ = [
     "DifficultyCalibration",
+    "average_domain_overlap",
     "calibrate_generated_puzzle_difficulty",
     "region_irregularity",
 ]

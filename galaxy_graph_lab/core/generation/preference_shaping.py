@@ -246,6 +246,8 @@ def build_preferred_assignment_by_cell(
     constructive_assignment: Mapping[str, tuple[Cell, ...]],
     profile: DifficultyProfile,
     rng: Random,
+    *,
+    aggressiveness: float = 1.0,
 ) -> SolverShapeGuidance:
     """Build sparse solver guidance that nudges medium and hard away from rectangles."""
 
@@ -262,13 +264,22 @@ def build_preferred_assignment_by_cell(
         profile.irregularity_target_range.min_ratio
         + profile.irregularity_target_range.max_ratio
     ) / 2.0
+    target_irregularity = min(
+        0.95,
+        target_irregularity * max(0.5, aggressiveness),
+    )
 
     selected_regions = _selected_regions_for_shaping(placement, profile)
     for region in selected_regions:
-        max_claims = max(4, round(region.rectangle.area * (target_irregularity + 0.28)))
+        max_claims = max(
+            4,
+            round(region.rectangle.area * (target_irregularity + 0.28) * aggressiveness),
+        )
         min_claims = 2
         if profile.difficulty == "hard":
             min_claims = 3
+        if aggressiveness > 1.2:
+            min_claims += 1
 
         claim_count = 0
         for _ in range(max_claims):

@@ -31,6 +31,7 @@ class PuzzleGenerationRequest:
     grid_size: BoardSpec
     random_seed: int | None = None
     max_generation_retries: int = 1
+    allow_noncanonical_grid_size: bool = False
 
     def __post_init__(self) -> None:
         if self.difficulty not in GENERATION_DIFFICULTIES:
@@ -46,7 +47,10 @@ class PuzzleGenerationRequest:
             raise TypeError("max_generation_retries must be an integer.")
         if self.max_generation_retries <= 0:
             raise ValueError("max_generation_retries must be positive.")
-        if self.grid_size not in self.difficulty_profile.allowed_grid_sizes:
+        if (
+            not self.allow_noncanonical_grid_size
+            and self.grid_size not in self.difficulty_profile.allowed_grid_sizes
+        ):
             raise ValueError(
                 "grid_size is not allowed for the selected difficulty: "
                 f"{self.difficulty}."

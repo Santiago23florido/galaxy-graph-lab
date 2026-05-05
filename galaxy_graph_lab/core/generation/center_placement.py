@@ -6,6 +6,8 @@ from types import MappingProxyType
 
 from ..board import BoardSpec, Cell
 from ..centers import CenterSpec
+from ..model_data import PuzzleData
+from .difficulty import average_domain_overlap
 from .profiles import (
     CENTER_TYPE_CELL,
     CENTER_TYPE_EDGE,
@@ -246,7 +248,28 @@ def _spacing_penalty(rectangles: tuple[RectangleRegion, ...]) -> float:
     return penalty
 
 
+def _overlap_penalty(
+    board: BoardSpec,
+    rectangles: tuple[RectangleRegion, ...],
+    profile: DifficultyProfile,
+) -> float:
+    centers = tuple(
+        rectangle.center_spec(f"probe_{index}")
+        for index, rectangle in enumerate(sorted(rectangles))
+    )
+    puzzle_data = PuzzleData.from_specs(board, centers)
+    overlap = average_domain_overlap(puzzle_data)
+    lower = profile.overlap_target_range.min_ratio
+    upper = profile.overlap_target_range.max_ratio
+    if lower <= overlap <= upper:
+        return 0.0
+    if overlap < lower:
+        return lower - overlap
+    return overlap - upper
+
+
 def _candidate_score(
+    board: BoardSpec,
     rectangles: tuple[RectangleRegion, ...],
     profile: DifficultyProfile,
 ) -> float:
@@ -254,10 +277,12 @@ def _candidate_score(
         (_mix_distance(rectangles, profile) * 9.0)
         + _shape_penalty(rectangles)
         + _spacing_penalty(rectangles)
+        + (_overlap_penalty(board, rectangles, profile) * 12.0)
     )
 
 
 def _enumerate_split_candidates(
+    board: BoardSpec,
     rectangles: tuple[RectangleRegion, ...],
     profile: DifficultyProfile,
 ) -> tuple[_SplitCandidate, ...]:
@@ -274,7 +299,7 @@ def _enumerate_split_candidates(
             next_rectangles = list(rectangles)
             next_rectangles.pop(region_index)
             next_rectangles.extend(children)
-            score = _candidate_score(tuple(next_rectangles), profile)
+            score = _candidate_score(board, tuple(next_rectangles), profile)
             candidates.append(
                 _SplitCandidate(
                     region_index=region_index,
@@ -287,12 +312,13 @@ def _enumerate_split_candidates(
 
 
 def _choose_split_candidate(
+    board: BoardSpec,
     rectangles: tuple[RectangleRegion, ...],
     profile: DifficultyProfile,
     rng: Random,
 ) -> _SplitCandidate | None:
     candidates = sorted(
-        _enumerate_split_candidates(rectangles, profile),
+        _enumerate_split_candidates(board, rectangles, profile),
         key=lambda candidate: (candidate.score, candidate.region_index),
     )
     if not candidates:
@@ -354,7 +380,7 @@ def place_candidate_centers(
     )
 
     while len(rectangles) < target_center_count:
-        candidate = _choose_split_candidate(rectangles, profile, rng)
+        candidate = _choose_split_candidate(board, rectangles, profile, rng)
         if candidate is None:
             return None
         rectangles = _apply_split_candidate(rectangles, candidate)

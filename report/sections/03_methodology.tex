@@ -108,6 +108,37 @@ the optimization model: a disconnected region cannot receive flow consistently
 from its kernel and is therefore automatically excluded from the feasible
 solution set.
 
+\subsection{Callback-Style Connectivity Rejection}
+
+The implementation also provides a second solving backend, denoted
+\texttt{parallel\_callback}, whose purpose is not to replace the canonical
+flow formulation, but to provide a comparative solution strategy based on the
+base MILP alone. In this backend, the assignment constraints of
+Eqs.~\eqref{eq:unique_assignment}--\eqref{eq:kernel_assignment_binary} are
+solved first without introducing the flow variables of
+Eqs.~\eqref{eq:flow_capacity_origin}--\eqref{eq:source_supply}. The resulting
+incumbent is then decoded into a \texttt{GalaxyAssignment} and validated at the
+graph level through \texttt{PuzzleData.graph.is\_connected()}.
+
+Operationally, the backend implements a callback-style separation loop. If the
+decoded incumbent is connected, it is accepted immediately. Otherwise, the
+backend constructs one exclusion cut over the binary assignment vector and
+resolves the base MILP. This cut forbids the exact disconnected incumbent while
+preserving the rest of the feasible region of the base model. The same process
+is repeated until either a connected assignment is found or the remaining base
+model becomes infeasible. Therefore, connectivity is enforced here by
+alternating optimization and graph validation rather than by extending the
+linear model with flow conservation.
+
+This architecture preserves a clean separation of responsibilities. The base
+MILP builder remains responsible only for the local algebraic constraints,
+whereas the callback-style backend is responsible for incumbent inspection,
+graph-connectedness verification, and no-good cut generation. In the current
+system, \texttt{exact\_flow} remains the default exact backend used by the
+interactive game and by the certification stage of generation, while
+\texttt{parallel\_callback} is exposed as an alternative backend for comparative
+experiments and dataset benchmarking.
+
 \subsection{Constructive Generation}
 The approach then moves from estimating a solution for a particular puzzle instance to generating the instance itself in a structured and policy-aware manner. This process relies on exact certification to confirm that the final instance is mathematically sound.
 
@@ -126,6 +157,43 @@ The generated result is not treated as a final solution. Instead, the existence 
 The function \texttt{\_solver\_effort\_score()} incorporates backend metadata, such as node count and whether guided solving was used. Consequently, computational effort also becomes part of the operational notion of difficulty. The resulting score is compared against the expectations of the active difficulty profile and is then mapped back to a difficulty label. This turns calibration into a feedback loop between the intended generation policy and the observed certified behavior. Without this step, difficulty labels would only describe what the generator attempted to create, rather than what the final certified instance actually exhibits.
 
 \subsection{Dataset and persistence layer}
-An instance representation and architecture are provided to support subsequent batch-processing workflows. The central serialized object is \texttt{StoredPuzzleInstance}, which stores not only the board and its centers, but also the metadata associated with the generation process and the difficulty-calibration measurements. Therefore, it contains sufficient information to explain both the structure of the puzzle and the way in which it was classified. The function \texttt{generate\_instance()} wraps repeated seeded attempts into a single callable generation routine. In turn, \texttt{generate\_dataset()} scales the same logic across multiple board sizes and difficulty labels, producing a manifest that describes the resulting corpus.
+An instance representation and architecture are provided to support subsequent
+batch-processing workflows. The central serialized object is
+\texttt{StoredPuzzleInstance}, which stores not only the board and its centers,
+but also the metadata associated with the generation process and the
+difficulty-calibration measurements. Therefore, it contains sufficient
+information to explain both the structure of the puzzle and the way in which it
+was classified. The function \texttt{generate\_instance()} wraps repeated seeded
+attempts into a single callable generation routine and can be coupled with a
+profile override so that non-canonical board sizes remain governed by the same
+difficulty policy as the requested family while allowing the center-count range
+to scale with the board area.
 
-On the solving side, \texttt{solve\_instance()} solves a stored puzzle through the canonical exact solver and exports compact diagnostic information. Similarly, \texttt{solve\_dataset()} iterates this process over an entire dataset while aggregating timing and status information. In this way, the dataset layer acts as a bridge between the core reasoning machinery of the system and empirical workflows, enabling reproducible generation, certification, calibration, and large-scale evaluation of puzzle instances.
+At the dataset level, \texttt{generate\_dataset()} now follows a two-stage
+selection protocol. First, the system searches only within the \texttt{hard}
+difficulty family for a reference board size whose solution time, under the
+selected screening backend, exceeds a prescribed threshold. Once such a
+reference dimension is found, a shared window of five odd board sizes is
+derived from it and reused for all requested difficulty levels. Consequently,
+the dataset does not define one independent size ladder per difficulty level;
+instead, it anchors the corpus to a single hard-reference scale and uses that
+scale to organize easy, medium, and hard instances consistently.
+
+Each candidate instance is then generated with a size-specific difficulty
+profile, certified as a valid puzzle, and screened again through the selected
+solver backend before being accepted into the corpus. This screening stage
+serves two purposes simultaneously: it guarantees that stored instances are
+actually solvable by the backend under study, and it filters the dataset by
+runtime so that the final corpus is biased toward nontrivial instances rather
+than merely valid ones. The generated manifest records the selected backend,
+the reference threshold, the discovered reference size, the effective board
+sizes used in the corpus, and the list of stored instances.
+
+On the solving side, \texttt{solve\_instance()} solves a stored puzzle through a
+selected backend and exports compact diagnostic information. Similarly,
+\texttt{solve\_dataset()} iterates this process over an entire dataset while
+aggregating timing, status, and backend-specific metadata. Because the solving
+command can execute either \texttt{exact\_flow}, \texttt{parallel\_callback}, or
+both backends, the dataset layer acts not only as a persistence mechanism, but
+also as the empirical interface through which the two solution strategies can
+be compared under reproducible conditions.

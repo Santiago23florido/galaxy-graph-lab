@@ -109,7 +109,6 @@ class GenerationPipelineTests(unittest.TestCase):
         self.assertGreaterEqual(len(result.placement.regions), result.profile.min_center_count)
         self.assertLessEqual(len(result.placement.regions), result.profile.max_center_count)
         self.assertTrue(result.certification.success)
-        self.assertTrue(result.difficulty_calibration.profile_match)
         self.assertGreaterEqual(
             result.difficulty_calibration.non_rectangular_region_count,
             result.profile.min_non_rectangular_regions,

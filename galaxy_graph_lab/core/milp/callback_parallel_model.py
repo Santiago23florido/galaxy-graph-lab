@@ -10,8 +10,11 @@ from scipy.sparse import csc_array
 
 from ..board import Cell
 from ..model_data import PuzzleData
-from .base_model import GalaxyAssignment
-from .flow_model import DirectedFlowKey, FlowMilpModel, SourceFlowKey
+from .base_model import BaseMilpModel, GalaxyAssignment
+
+
+DirectedFlowKey = tuple[str, Cell, Cell]
+SourceFlowKey = tuple[str, Cell]
 
 
 @dataclass(frozen=True, slots=True)
@@ -148,62 +151,54 @@ def _constraint_to_rows(
 
 @dataclass(frozen=True, slots=True)
 class CallbackParallelMilpModel:
-    """Exact-flow model exported in a backend-neutral form for callback solvers."""
+    """Base MILP exported in a backend-neutral form for callback solvers."""
 
     puzzle_data: PuzzleData
-    flow_model: FlowMilpModel
+    base_model: BaseMilpModel
 
     @classmethod
     def from_puzzle_data(cls, puzzle_data: PuzzleData) -> "CallbackParallelMilpModel":
         return cls(
             puzzle_data=puzzle_data,
-            flow_model=FlowMilpModel.from_puzzle_data(puzzle_data),
+            base_model=BaseMilpModel.from_puzzle_data(puzzle_data),
         )
 
     @property
     def num_variables(self) -> int:
-        return self.flow_model.num_variables
+        return self.base_model.num_variables
 
     @property
     def num_assignment_variables(self) -> int:
-        return self.flow_model.num_assignment_variables
+        return self.base_model.num_variables
 
     @property
     def directed_flow_keys(self) -> tuple[DirectedFlowKey, ...]:
-        return self.flow_model.directed_flow_keys
+        return tuple()
 
     @property
     def source_flow_keys(self) -> tuple[SourceFlowKey, ...]:
-        return self.flow_model.source_flow_keys
+        return tuple()
 
     @property
     def directed_flow_index_by_key(self) -> Mapping[DirectedFlowKey, int]:
-        return self.flow_model.directed_flow_index_by_key
+        return MappingProxyType({})
 
     @property
     def source_flow_index_by_key(self) -> Mapping[SourceFlowKey, int]:
-        return self.flow_model.source_flow_index_by_key
+        return MappingProxyType({})
 
     def assignment_variable_index(self, cell: Cell, center_id: str) -> int:
-        return self.flow_model.assignment_variable_index(cell, center_id)
+        return self.base_model.variable_index(cell, center_id)
 
     def decode_assignment(self, variable_values: Sequence[float]) -> GalaxyAssignment:
-        return self.flow_model.decode_assignment(variable_values)
+        return self.base_model.decode_assignment(variable_values)
 
     def _variable_names(self) -> tuple[str, ...]:
         assignment_names = tuple(
             f"x__r{cell.row}_c{cell.col}__{center_id}"
-            for cell, center_id in self.flow_model.base_model.variable_keys
+            for cell, center_id in self.base_model.variable_keys
         )
-        directed_flow_names = tuple(
-            f"f__{center_id}__r{tail.row}_c{tail.col}__r{head.row}_c{head.col}"
-            for center_id, tail, head in self.flow_model.directed_flow_keys
-        )
-        source_flow_names = tuple(
-            f"s__{center_id}__r{cell.row}_c{cell.col}"
-            for center_id, cell in self.flow_model.source_flow_keys
-        )
-        return assignment_names + directed_flow_names + source_flow_names
+        return assignment_names
 
     def build_payload(
         self,
@@ -211,9 +206,9 @@ class CallbackParallelMilpModel:
         objective: Sequence[float] | None = None,
         extra_constraints: Sequence[LinearConstraint] = (),
     ) -> CallbackParallelProblemPayload:
-        """Export the exact-flow model into a solver-neutral row payload."""
+        """Export the base MILP into a solver-neutral row payload."""
 
-        objective_vector = self.flow_model.objective
+        objective_vector = self.base_model.objective
         if objective is not None:
             objective_vector = np.asarray(objective, dtype=float)
             if objective_vector.shape != (self.num_variables,):
@@ -221,14 +216,14 @@ class CallbackParallelMilpModel:
                     "Custom objective length does not match the callback-parallel model."
                 )
 
-        constraints = self.flow_model.constraints + tuple(extra_constraints)
+        constraints = self.base_model.constraints + tuple(extra_constraints)
         constraint_rows: list[CallbackParallelConstraintRow] = []
         for constraint in constraints:
             constraint_rows.extend(_constraint_to_rows(constraint))
 
-        lower_bounds = np.asarray(self.flow_model.bounds.lb, dtype=float)
-        upper_bounds = np.asarray(self.flow_model.bounds.ub, dtype=float)
-        integrality = np.asarray(self.flow_model.integrality, dtype=int)
+        lower_bounds = np.asarray(self.base_model.bounds.lb, dtype=float)
+        upper_bounds = np.asarray(self.base_model.bounds.ub, dtype=float)
+        integrality = np.asarray(self.base_model.integrality, dtype=int)
         variable_types = tuple(
             "B" if int(value) == 1 else "C"
             for value in integrality.tolist()
@@ -281,9 +276,7 @@ class CallbackParallelMilpModel:
                 }
             )
             if success:
-                assignment = self.flow_model.base_model.decode_assignment(
-                    assignment_variable_values
-                )
+                assignment = self.base_model.decode_assignment(assignment_variable_values)
 
         return CallbackParallelSolveResult(
             success=bool(success),

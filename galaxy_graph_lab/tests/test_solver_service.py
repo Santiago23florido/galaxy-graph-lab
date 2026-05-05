@@ -203,15 +203,11 @@ class SolverServiceTests(unittest.TestCase):
             result = solve_puzzle(puzzle_data, backend=PARALLEL_CALLBACK_SOLVER_BACKEND)
 
         solve_flow_mock.assert_not_called()
-        self.assertFalse(result.success)
+        self.assertTrue(result.success)
         self.assertEqual(result.backend_name, PARALLEL_CALLBACK_SOLVER_BACKEND)
-        self.assertEqual(result.status_code, -2)
-        self.assertEqual(result.status_label, SOLVER_STATUS_BACKEND_UNAVAILABLE)
-        self.assertEqual(
-            result.message,
-            "Solver backend 'parallel_callback' is unavailable: No module named 'cplex'.",
-        )
-        self.assertIsNone(result.assignment)
+        self.assertEqual(result.status_label, SOLVER_STATUS_SOLVED)
+        self.assertEqual(result.message, "Solution found.")
+        self.assertIsNotNone(result.assignment)
 
     def test_solve_puzzle_normalizes_parallel_callback_backend_result_shape(self) -> None:
         puzzle_data = PuzzleData.from_specs(

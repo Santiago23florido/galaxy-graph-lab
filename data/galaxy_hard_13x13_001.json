@@ -1,0 +1,153 @@
+{
+  "center_type_by_center": {
+    "g0": "edge",
+    "g1": "edge",
+    "g10": "vertex",
+    "g11": "vertex",
+    "g12": "cell",
+    "g13": "edge",
+    "g14": "cell",
+    "g15": "vertex",
+    "g16": "vertex",
+    "g17": "edge",
+    "g18": "cell",
+    "g19": "vertex",
+    "g2": "vertex",
+    "g3": "cell",
+    "g4": "edge",
+    "g5": "edge",
+    "g6": "edge",
+    "g7": "cell",
+    "g8": "edge",
+    "g9": "edge"
+  },
+  "centers": [
+    {
+      "col_coord2": 2,
+      "id": "g0",
+      "row_coord2": 1
+    },
+    {
+      "col_coord2": 6,
+      "id": "g1",
+      "row_coord2": 1
+    },
+    {
+      "col_coord2": 23,
+      "id": "g2",
+      "row_coord2": 1
+    },
+    {
+      "col_coord2": 10,
+      "id": "g3",
+      "row_coord2": 2
+    },
+    {
+      "col_coord2": 15,
+      "id": "g4",
+      "row_coord2": 2
+    },
+    {
+      "col_coord2": 19,
+      "id": "g5",
+      "row_coord2": 2
+    },
+    {
+      "col_coord2": 2,
+      "id": "g6",
+      "row_coord2": 5
+    },
+    {
+      "col_coord2": 6,
+      "id": "g7",
+      "row_coord2": 6
+    },
+    {
+      "col_coord2": 23,
+      "id": "g8",
+      "row_coord2": 6
+    },
+    {
+      "col_coord2": 10,
+      "id": "g9",
+      "row_coord2": 7
+    },
+    {
+      "col_coord2": 15,
+      "id": "g10",
+      "row_coord2": 7
+    },
+    {
+      "col_coord2": 19,
+      "id": "g11",
+      "row_coord2": 7
+    },
+    {
+      "col_coord2": 2,
+      "id": "g12",
+      "row_coord2": 10
+    },
+    {
+      "col_coord2": 6,
+      "id": "g13",
+      "row_coord2": 11
+    },
+    {
+      "col_coord2": 10,
+      "id": "g14",
+      "row_coord2": 12
+    },
+    {
+      "col_coord2": 19,
+      "id": "g15",
+      "row_coord2": 17
+    },
+    {
+      "col_coord2": 3,
+      "id": "g16",
+      "row_coord2": 17
+    },
+    {
+      "col_coord2": 10,
+      "id": "g17",
+      "row_coord2": 17
+    },
+    {
+      "col_coord2": 10,
+      "id": "g18",
+      "row_coord2": 22
+    },
+    {
+      "col_coord2": 3,
+      "id": "g19",
+      "row_coord2": 23
+    }
+  ],
+  "difficulty_calibration": {
+    "average_domain_overlap": 0.3943710127591707,
+    "average_non_rectangular_irregularity": 0.45265151515151514,
+    "average_region_irregularity": 0.09053030303030303,
+    "board_size_score": 0.5,
+    "center_count_score": 1.0,
+    "center_type_score": 0.62,
+    "domain_overlap_score": 0.3943710127591707,
+    "irregularity_within_target": true,
+    "max_region_irregularity": 0.6590909090909092,
+    "measured_difficulty": "hard",
+    "measured_score": 0.6466754917468164,
+    "message": "Difficulty calibration matched the requested profile.",
+    "non_rectangular_region_count": 4,
+    "overlap_within_target": true,
+    "profile_match": true,
+    "requested_difficulty": "hard",
+    "solver_effort_score": 0.13519839832940753
+  },
+  "generation_retry_count": 3,
+  "generation_seed": 142417330,
+  "grid_size": {
+    "cols": 13,
+    "rows": 13
+  },
+  "instance_id": "reference_hard_13x13",
+  "requested_difficulty": "hard"
+}
