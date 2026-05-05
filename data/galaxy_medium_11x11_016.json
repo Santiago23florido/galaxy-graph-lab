@@ -1,0 +1,99 @@
+{
+  "center_type_by_center": {
+    "g0": "vertex",
+    "g1": "cell",
+    "g10": "cell",
+    "g2": "edge",
+    "g3": "cell",
+    "g4": "vertex",
+    "g5": "edge",
+    "g6": "cell",
+    "g7": "edge",
+    "g8": "cell",
+    "g9": "edge"
+  },
+  "centers": [
+    {
+      "col_coord2": 13,
+      "id": "g0",
+      "row_coord2": 1
+    },
+    {
+      "col_coord2": 8,
+      "id": "g1",
+      "row_coord2": 2
+    },
+    {
+      "col_coord2": 18,
+      "id": "g2",
+      "row_coord2": 3
+    },
+    {
+      "col_coord2": 2,
+      "id": "g3",
+      "row_coord2": 6
+    },
+    {
+      "col_coord2": 13,
+      "id": "g4",
+      "row_coord2": 7
+    },
+    {
+      "col_coord2": 8,
+      "id": "g5",
+      "row_coord2": 9
+    },
+    {
+      "col_coord2": 18,
+      "id": "g6",
+      "row_coord2": 14
+    },
+    {
+      "col_coord2": 13,
+      "id": "g7",
+      "row_coord2": 16
+    },
+    {
+      "col_coord2": 2,
+      "id": "g8",
+      "row_coord2": 14
+    },
+    {
+      "col_coord2": 8,
+      "id": "g9",
+      "row_coord2": 17
+    },
+    {
+      "col_coord2": 2,
+      "id": "g10",
+      "row_coord2": 18
+    }
+  ],
+  "difficulty_calibration": {
+    "average_domain_overlap": 0.3145021645021645,
+    "average_non_rectangular_irregularity": 0.58125,
+    "average_region_irregularity": 0.1056818181818182,
+    "board_size_score": 0.5,
+    "center_count_score": 0.9,
+    "center_type_score": 0.49090909090909096,
+    "domain_overlap_score": 0.3145021645021645,
+    "irregularity_within_target": false,
+    "max_region_irregularity": 0.6,
+    "measured_difficulty": "hard",
+    "measured_score": 0.5699916312112095,
+    "message": "Difficulty calibration mismatch: requested medium, measured hard, overlap=0.315, non_rectangular_regions=2, non_rectangular_irregularity=0.581.",
+    "non_rectangular_region_count": 2,
+    "overlap_within_target": true,
+    "profile_match": false,
+    "requested_difficulty": "medium",
+    "solver_effort_score": 0.09634488354066707
+  },
+  "generation_retry_count": 15,
+  "generation_seed": 538910645,
+  "grid_size": {
+    "cols": 11,
+    "rows": 11
+  },
+  "instance_id": "galaxy_medium_11x11_016",
+  "requested_difficulty": "medium"
+}

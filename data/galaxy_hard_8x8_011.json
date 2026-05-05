@@ -1,0 +1,93 @@
+{
+  "center_type_by_center": {
+    "g0": "vertex",
+    "g1": "edge",
+    "g2": "cell",
+    "g3": "cell",
+    "g4": "edge",
+    "g5": "edge",
+    "g6": "vertex",
+    "g7": "edge",
+    "g8": "vertex",
+    "g9": "edge"
+  },
+  "centers": [
+    {
+      "col_coord2": 7,
+      "id": "g0",
+      "row_coord2": 1
+    },
+    {
+      "col_coord2": 1,
+      "id": "g1",
+      "row_coord2": 2
+    },
+    {
+      "col_coord2": 4,
+      "id": "g2",
+      "row_coord2": 2
+    },
+    {
+      "col_coord2": 12,
+      "id": "g3",
+      "row_coord2": 2
+    },
+    {
+      "col_coord2": 7,
+      "id": "g4",
+      "row_coord2": 4
+    },
+    {
+      "col_coord2": 1,
+      "id": "g5",
+      "row_coord2": 6
+    },
+    {
+      "col_coord2": 13,
+      "id": "g6",
+      "row_coord2": 9
+    },
+    {
+      "col_coord2": 7,
+      "id": "g7",
+      "row_coord2": 10
+    },
+    {
+      "col_coord2": 1,
+      "id": "g8",
+      "row_coord2": 11
+    },
+    {
+      "col_coord2": 13,
+      "id": "g9",
+      "row_coord2": 14
+    }
+  ],
+  "difficulty_calibration": {
+    "average_domain_overlap": 0.3545679012345679,
+    "average_non_rectangular_irregularity": 0.30000000000000004,
+    "average_region_irregularity": 0.030000000000000006,
+    "board_size_score": 0.5,
+    "center_count_score": 0.8,
+    "center_type_score": 0.64,
+    "domain_overlap_score": 0.3545679012345679,
+    "irregularity_within_target": false,
+    "max_region_irregularity": 0.30000000000000004,
+    "measured_difficulty": "hard",
+    "measured_score": 0.5719099882389252,
+    "message": "Difficulty calibration mismatch: requested hard, measured hard, overlap=0.355, non_rectangular_regions=1, non_rectangular_irregularity=0.300.",
+    "non_rectangular_region_count": 1,
+    "overlap_within_target": true,
+    "profile_match": false,
+    "requested_difficulty": "hard",
+    "solver_effort_score": 0.10724803053740024
+  },
+  "generation_retry_count": 3,
+  "generation_seed": 538924085,
+  "grid_size": {
+    "cols": 8,
+    "rows": 8
+  },
+  "instance_id": "galaxy_hard_8x8_011",
+  "requested_difficulty": "hard"
+}

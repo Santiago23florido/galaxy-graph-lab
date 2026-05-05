@@ -3,13 +3,20 @@ from __future__ import annotations
 from collections.abc import Mapping
 from dataclasses import dataclass
 
-from ..core import Cell, PuzzleData, PuzzleSolveResult, solve_puzzle
+from ..core import (
+    DEFAULT_SOLVER_BACKEND,
+    Cell,
+    PuzzleData,
+    PuzzleSolveResult,
+    solve_puzzle,
+)
 
 
 @dataclass(slots=True)
 class SolverSessionState:
     """Mutable UI state for requesting, caching, and displaying solver results."""
 
+    solver_backend: str = DEFAULT_SOLVER_BACKEND
     solver_result: PuzzleSolveResult | None = None
     solver_status_label: str = "not_requested"
     solver_message: str = "The solver has not been requested yet."
@@ -39,12 +46,16 @@ class SolverSessionState:
         self,
         puzzle_data: PuzzleData,
         *,
+        backend: str | None = None,
         options: Mapping[str, object] | None = None,
         preferred_assignment_by_cell: Mapping[Cell, str] | None = None,
     ) -> PuzzleSolveResult:
+        selected_backend = self.solver_backend if backend is None else backend
+        self.solver_backend = selected_backend
         self.solver_result_requested = True
         self.solver_result = solve_puzzle(
             puzzle_data,
+            backend=selected_backend,
             options=options,
             preferred_assignment_by_cell=preferred_assignment_by_cell,
         )

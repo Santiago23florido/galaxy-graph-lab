@@ -5,7 +5,11 @@ from dataclasses import dataclass
 
 from ..board import Cell
 from ..model_data import PuzzleData
-from ..solver_service import PuzzleSolveResult, solve_puzzle
+from ..solver_service import (
+    EXACT_FLOW_SOLVER_BACKEND,
+    PuzzleSolveResult,
+    solve_puzzle,
+)
 from ..validators import AssignmentValidationResult, CandidateAssignment, validate_assignment
 
 
@@ -52,6 +56,7 @@ def certify_generated_puzzle(
 
     solve_result = solve_puzzle(
         puzzle_data,
+        backend=EXACT_FLOW_SOLVER_BACKEND,
         preferred_assignment_by_cell=preferred_assignment_by_cell,
         avoid_assignment_by_cell=avoid_assignment_by_cell,
         minimum_mismatches_against_avoid=minimum_mismatches_against_avoid,

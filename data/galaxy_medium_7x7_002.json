@@ -2,55 +2,55 @@
   "center_type_by_center": {
     "g0": "cell",
     "g1": "edge",
-    "g2": "cell",
+    "g2": "edge",
     "g3": "cell",
     "g4": "vertex",
-    "g5": "vertex"
+    "g5": "cell"
   },
   "centers": [
     {
-      "col_coord2": 10,
+      "col_coord2": 2,
       "id": "g0",
       "row_coord2": 2
     },
     {
-      "col_coord2": 3,
+      "col_coord2": 7,
       "id": "g1",
-      "row_coord2": 4
+      "row_coord2": 2
     },
     {
-      "col_coord2": 10,
+      "col_coord2": 11,
       "id": "g2",
+      "row_coord2": 2
+    },
+    {
+      "col_coord2": 2,
+      "id": "g3",
       "row_coord2": 6
     },
     {
-      "col_coord2": 10,
-      "id": "g3",
-      "row_coord2": 10
-    },
-    {
-      "col_coord2": 1,
+      "col_coord2": 9,
       "id": "g4",
-      "row_coord2": 11
+      "row_coord2": 9
     },
     {
-      "col_coord2": 5,
+      "col_coord2": 2,
       "id": "g5",
-      "row_coord2": 11
+      "row_coord2": 10
     }
   ],
   "difficulty_calibration": {
-    "average_domain_overlap": 0.2518518518518518,
+    "average_domain_overlap": 0.26666666666666666,
     "average_non_rectangular_irregularity": 0.09523809523809523,
     "average_region_irregularity": 0.015873015873015872,
-    "board_size_score": 0.42857142857142855,
+    "board_size_score": 0.5,
     "center_count_score": 0.4,
-    "center_type_score": 0.5333333333333333,
-    "domain_overlap_score": 0.2518518518518518,
+    "center_type_score": 0.4666666666666666,
+    "domain_overlap_score": 0.26666666666666666,
     "irregularity_within_target": true,
     "max_region_irregularity": 0.09523809523809523,
     "measured_difficulty": "medium",
-    "measured_score": 0.3823470576461568,
+    "measured_score": 0.38552166082075995,
     "message": "Difficulty calibration matched the requested profile.",
     "non_rectangular_region_count": 1,
     "overlap_within_target": true,
@@ -58,8 +58,8 @@
     "requested_difficulty": "medium",
     "solver_effort_score": 0.12188327487426638
   },
-  "generation_retry_count": 36,
-  "generation_seed": 436666427,
+  "generation_retry_count": 18,
+  "generation_seed": 538874549,
   "grid_size": {
     "cols": 7,
     "rows": 7

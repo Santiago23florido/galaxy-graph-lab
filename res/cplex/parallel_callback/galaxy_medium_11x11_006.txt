@@ -1,0 +1,10 @@
+solveTime=10.058365
+isOptimal=false
+isStructurallyValid=false
+statusLabel=infeasible
+statusCode=1
+backend=parallel_callback
+requestedDifficulty=medium
+measuredDifficulty=hard
+gridSize=11x11
+mipNodeCount=245

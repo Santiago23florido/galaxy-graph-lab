@@ -1,0 +1,12 @@
+solveTime=0.033369
+isOptimal=true
+isStructurallyValid=true
+statusLabel=solved
+statusCode=0
+backend=exact_flow
+requestedDifficulty=medium
+measuredDifficulty=medium
+gridSize=9x9
+objectiveValue=0.0
+mipGap=0.0
+mipNodeCount=1

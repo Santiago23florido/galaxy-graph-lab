@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import argparse
 import sys
 from pathlib import Path
 
@@ -10,8 +11,10 @@ import pygame
 
 if __package__ in {None, ""}:
     sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+    from galaxy_graph_lab.core import DEFAULT_SOLVER_BACKEND, SUPPORTED_SOLVER_BACKENDS
     from galaxy_graph_lab.ui.app import run_phase_f_app
 else:
+    from .core import DEFAULT_SOLVER_BACKEND, SUPPORTED_SOLVER_BACKENDS
     from .ui.app import run_phase_f_app
 
 
@@ -29,10 +32,25 @@ def build_status_report() -> str:
     )
 
 
+def _build_parser() -> argparse.ArgumentParser:
+    parser = argparse.ArgumentParser(
+        prog="python -m galaxy_graph_lab.main",
+        description="Launch the Galaxy Graph Lab playable UI.",
+    )
+    parser.add_argument(
+        "--solver-backend",
+        default=DEFAULT_SOLVER_BACKEND,
+        choices=tuple(sorted(SUPPORTED_SOLVER_BACKENDS)),
+        help="Select the backend used when the game requests a solver solution.",
+    )
+    return parser
+
+
 def main() -> None:
     """Launch the Pygame MVP with the start screen and board scene."""
 
-    run_phase_f_app()
+    args = _build_parser().parse_args()
+    run_phase_f_app(solver_backend=args.solver_backend)
 
 
 if __name__ == "__main__":

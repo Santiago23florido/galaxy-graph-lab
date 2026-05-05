@@ -1,0 +1,69 @@
+{
+  "center_type_by_center": {
+    "g0": "cell",
+    "g1": "cell",
+    "g2": "cell",
+    "g3": "vertex",
+    "g4": "edge",
+    "g5": "vertex"
+  },
+  "centers": [
+    {
+      "col_coord2": 2,
+      "id": "g0",
+      "row_coord2": 4
+    },
+    {
+      "col_coord2": 6,
+      "id": "g1",
+      "row_coord2": 4
+    },
+    {
+      "col_coord2": 12,
+      "id": "g2",
+      "row_coord2": 4
+    },
+    {
+      "col_coord2": 3,
+      "id": "g3",
+      "row_coord2": 13
+    },
+    {
+      "col_coord2": 8,
+      "id": "g4",
+      "row_coord2": 13
+    },
+    {
+      "col_coord2": 13,
+      "id": "g5",
+      "row_coord2": 13
+    }
+  ],
+  "difficulty_calibration": {
+    "average_domain_overlap": 0.24000000000000002,
+    "average_non_rectangular_irregularity": 0.2222222222222222,
+    "average_region_irregularity": 0.037037037037037035,
+    "board_size_score": 0.5,
+    "center_count_score": 0.4,
+    "center_type_score": 0.5333333333333333,
+    "domain_overlap_score": 0.24000000000000002,
+    "irregularity_within_target": true,
+    "max_region_irregularity": 0.2222222222222222,
+    "measured_difficulty": "medium",
+    "measured_score": 0.3938676620794912,
+    "message": "Difficulty calibration matched the requested profile.",
+    "non_rectangular_region_count": 1,
+    "overlap_within_target": true,
+    "profile_match": true,
+    "requested_difficulty": "medium",
+    "solver_effort_score": 0.11200995412824502
+  },
+  "generation_retry_count": 3,
+  "generation_seed": 538894133,
+  "grid_size": {
+    "cols": 9,
+    "rows": 9
+  },
+  "instance_id": "galaxy_medium_9x9_013",
+  "requested_difficulty": "medium"
+}

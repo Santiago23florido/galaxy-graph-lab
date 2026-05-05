@@ -1,0 +1,93 @@
+{
+  "center_type_by_center": {
+    "g0": "cell",
+    "g1": "edge",
+    "g2": "cell",
+    "g3": "edge",
+    "g4": "vertex",
+    "g5": "vertex",
+    "g6": "edge",
+    "g7": "edge",
+    "g8": "cell",
+    "g9": "cell"
+  },
+  "centers": [
+    {
+      "col_coord2": 2,
+      "id": "g0",
+      "row_coord2": 2
+    },
+    {
+      "col_coord2": 7,
+      "id": "g1",
+      "row_coord2": 2
+    },
+    {
+      "col_coord2": 12,
+      "id": "g2",
+      "row_coord2": 2
+    },
+    {
+      "col_coord2": 17,
+      "id": "g3",
+      "row_coord2": 2
+    },
+    {
+      "col_coord2": 1,
+      "id": "g4",
+      "row_coord2": 7
+    },
+    {
+      "col_coord2": 11,
+      "id": "g5",
+      "row_coord2": 7
+    },
+    {
+      "col_coord2": 3,
+      "id": "g6",
+      "row_coord2": 14
+    },
+    {
+      "col_coord2": 9,
+      "id": "g7",
+      "row_coord2": 14
+    },
+    {
+      "col_coord2": 14,
+      "id": "g8",
+      "row_coord2": 14
+    },
+    {
+      "col_coord2": 18,
+      "id": "g9",
+      "row_coord2": 14
+    }
+  ],
+  "difficulty_calibration": {
+    "average_domain_overlap": 0.30153968253968255,
+    "average_non_rectangular_irregularity": 0.17523809523809525,
+    "average_region_irregularity": 0.03504761904761905,
+    "board_size_score": 0.5,
+    "center_count_score": 0.8,
+    "center_type_score": 0.52,
+    "domain_overlap_score": 0.30153968253968255,
+    "irregularity_within_target": true,
+    "max_region_irregularity": 0.19047619047619047,
+    "measured_difficulty": "medium",
+    "measured_score": 0.5392638338871136,
+    "message": "Difficulty calibration matched the requested profile.",
+    "non_rectangular_region_count": 2,
+    "overlap_within_target": true,
+    "profile_match": true,
+    "requested_difficulty": "medium",
+    "solver_effort_score": 0.10032881506161208
+  },
+  "generation_retry_count": 35,
+  "generation_seed": 538902581,
+  "grid_size": {
+    "cols": 10,
+    "rows": 10
+  },
+  "instance_id": "galaxy_medium_10x10_015",
+  "requested_difficulty": "medium"
+}

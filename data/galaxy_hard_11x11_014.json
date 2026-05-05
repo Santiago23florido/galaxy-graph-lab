@@ -1,0 +1,135 @@
+{
+  "center_type_by_center": {
+    "g0": "cell",
+    "g1": "edge",
+    "g10": "edge",
+    "g11": "edge",
+    "g12": "edge",
+    "g13": "cell",
+    "g14": "cell",
+    "g15": "edge",
+    "g16": "vertex",
+    "g2": "vertex",
+    "g3": "edge",
+    "g4": "edge",
+    "g5": "vertex",
+    "g6": "vertex",
+    "g7": "vertex",
+    "g8": "edge",
+    "g9": "edge"
+  },
+  "centers": [
+    {
+      "col_coord2": 14,
+      "id": "g0",
+      "row_coord2": 2
+    },
+    {
+      "col_coord2": 19,
+      "id": "g1",
+      "row_coord2": 2
+    },
+    {
+      "col_coord2": 5,
+      "id": "g2",
+      "row_coord2": 3
+    },
+    {
+      "col_coord2": 19,
+      "id": "g3",
+      "row_coord2": 6
+    },
+    {
+      "col_coord2": 14,
+      "id": "g4",
+      "row_coord2": 7
+    },
+    {
+      "col_coord2": 1,
+      "id": "g5",
+      "row_coord2": 9
+    },
+    {
+      "col_coord2": 5,
+      "id": "g6",
+      "row_coord2": 9
+    },
+    {
+      "col_coord2": 9,
+      "id": "g7",
+      "row_coord2": 9
+    },
+    {
+      "col_coord2": 19,
+      "id": "g8",
+      "row_coord2": 12
+    },
+    {
+      "col_coord2": 14,
+      "id": "g9",
+      "row_coord2": 11
+    },
+    {
+      "col_coord2": 1,
+      "id": "g10",
+      "row_coord2": 16
+    },
+    {
+      "col_coord2": 5,
+      "id": "g11",
+      "row_coord2": 16
+    },
+    {
+      "col_coord2": 9,
+      "id": "g12",
+      "row_coord2": 16
+    },
+    {
+      "col_coord2": 14,
+      "id": "g13",
+      "row_coord2": 14
+    },
+    {
+      "col_coord2": 12,
+      "id": "g14",
+      "row_coord2": 18
+    },
+    {
+      "col_coord2": 15,
+      "id": "g15",
+      "row_coord2": 18
+    },
+    {
+      "col_coord2": 19,
+      "id": "g16",
+      "row_coord2": 19
+    }
+  ],
+  "difficulty_calibration": {
+    "average_domain_overlap": 0.3874265539549153,
+    "average_non_rectangular_irregularity": 0.19166666666666665,
+    "average_region_irregularity": 0.022549019607843137,
+    "board_size_score": 0.5,
+    "center_count_score": 1.0,
+    "center_type_score": 0.6470588235294118,
+    "domain_overlap_score": 0.3874265539549153,
+    "irregularity_within_target": true,
+    "max_region_irregularity": 0.25,
+    "measured_difficulty": "hard",
+    "measured_score": 0.6466108529392488,
+    "message": "Difficulty calibration matched the requested profile.",
+    "non_rectangular_region_count": 2,
+    "overlap_within_target": true,
+    "profile_match": true,
+    "requested_difficulty": "hard",
+    "solver_effort_score": 0.0908510514012914
+  },
+  "generation_retry_count": 2,
+  "generation_seed": 538948277,
+  "grid_size": {
+    "cols": 11,
+    "rows": 11
+  },
+  "instance_id": "galaxy_hard_11x11_014",
+  "requested_difficulty": "hard"
+}

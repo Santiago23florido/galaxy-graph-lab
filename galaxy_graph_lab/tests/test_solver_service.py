@@ -5,9 +5,16 @@ from unittest.mock import patch
 
 from galaxy_graph_lab.core import (
     BoardSpec,
+    CallbackParallelSolveResult,
     Cell,
     CenterSpec,
+    DEFAULT_SOLVER_TIME_LIMIT_BY_BACKEND,
+    EXACT_FLOW_SOLVER_BACKEND,
     FlowMilpSolveResult,
+    GalaxyAssignment,
+    HEURISTIC_ORBIT_SOLVER_BACKEND,
+    HeuristicOrbitSolveResult,
+    PARALLEL_CALLBACK_SOLVER_BACKEND,
     PuzzleData,
     PuzzleSolveResult,
     SOLVER_STATUS_BACKEND_UNAVAILABLE,
@@ -30,6 +37,12 @@ class SolverServiceTests(unittest.TestCase):
             ],
         )
 
+    def _single_cell_assignment(self) -> GalaxyAssignment:
+        return GalaxyAssignment(
+            assigned_center_by_cell={Cell(0, 0): "g0"},
+            cells_by_center={"g0": (Cell(0, 0),)},
+        )
+
     def test_solve_puzzle_wraps_exact_flow_as_public_entrypoint(self) -> None:
         board = BoardSpec(rows=1, cols=3)
         center = CenterSpec.from_coordinates("g0", 0, 1)
@@ -39,7 +52,7 @@ class SolverServiceTests(unittest.TestCase):
 
         self.assertIsInstance(result, PuzzleSolveResult)
         self.assertTrue(result.success)
-        self.assertEqual(result.backend_name, "exact_flow")
+        self.assertEqual(result.backend_name, EXACT_FLOW_SOLVER_BACKEND)
         self.assertEqual(result.status_label, SOLVER_STATUS_SOLVED)
         self.assertEqual(result.message, "Solution found.")
         self.assertIsNotNone(result.assignment)
@@ -123,10 +136,13 @@ class SolverServiceTests(unittest.TestCase):
         ) as solve_flow_mock:
             result = solve_puzzle(puzzle_data)
 
-        solve_flow_mock.assert_called_once_with(puzzle_data, options=None)
+        solve_flow_mock.assert_called_once_with(
+            puzzle_data,
+            options={"time_limit": DEFAULT_SOLVER_TIME_LIMIT_BY_BACKEND[EXACT_FLOW_SOLVER_BACKEND]},
+        )
         self.assertIsInstance(result, PuzzleSolveResult)
         self.assertFalse(result.success)
-        self.assertEqual(result.backend_name, "exact_flow")
+        self.assertEqual(result.backend_name, EXACT_FLOW_SOLVER_BACKEND)
         self.assertEqual(result.status_code, 9)
         self.assertEqual(result.status_label, SOLVER_STATUS_ERROR)
         self.assertEqual(
@@ -183,6 +199,131 @@ class SolverServiceTests(unittest.TestCase):
         )
         self.assertIsNone(result.assignment)
 
+    def test_solve_puzzle_dispatches_parallel_callback_backend(self) -> None:
+        puzzle_data = PuzzleData.from_specs(
+            BoardSpec(rows=1, cols=1),
+            [CenterSpec.from_coordinates("g0", 0, 0)],
+        )
+
+        with patch("galaxy_graph_lab.core.solver_service.solve_flow_model") as solve_flow_mock:
+            result = solve_puzzle(puzzle_data, backend=PARALLEL_CALLBACK_SOLVER_BACKEND)
+
+        solve_flow_mock.assert_not_called()
+        self.assertTrue(result.success)
+        self.assertEqual(result.backend_name, PARALLEL_CALLBACK_SOLVER_BACKEND)
+        self.assertEqual(result.status_label, SOLVER_STATUS_SOLVED)
+        self.assertEqual(result.message, "Solution found.")
+        self.assertIsNotNone(result.assignment)
+
+    def test_solve_puzzle_normalizes_parallel_callback_backend_result_shape(self) -> None:
+        puzzle_data = PuzzleData.from_specs(
+            BoardSpec(rows=1, cols=1),
+            [CenterSpec.from_coordinates("g0", 0, 0)],
+        )
+        backend_result = CallbackParallelSolveResult(
+            success=False,
+            status=11,
+            message="callback backend failed",
+            objective_value=None,
+            mip_gap=None,
+            mip_node_count=None,
+            assignment=None,
+            assignment_variable_values=None,
+            directed_flow_values=None,
+            source_flow_values=None,
+        )
+
+        with patch(
+            "galaxy_graph_lab.core.solver_service.solve_callback_parallel_model",
+            return_value=backend_result,
+        ) as solve_callback_mock:
+            result = solve_puzzle(puzzle_data, backend=PARALLEL_CALLBACK_SOLVER_BACKEND)
+
+        solve_callback_mock.assert_called_once_with(
+            puzzle_data,
+            options={
+                "time_limit": DEFAULT_SOLVER_TIME_LIMIT_BY_BACKEND[
+                    PARALLEL_CALLBACK_SOLVER_BACKEND
+                ]
+            },
+        )
+        self.assertIsInstance(result, PuzzleSolveResult)
+        self.assertFalse(result.success)
+        self.assertEqual(result.backend_name, PARALLEL_CALLBACK_SOLVER_BACKEND)
+        self.assertEqual(result.status_code, 11)
+        self.assertEqual(result.status_label, SOLVER_STATUS_ERROR)
+        self.assertEqual(
+            result.message,
+            "The solver could not complete successfully: callback backend failed",
+        )
+        self.assertIsNone(result.assignment)
+
+    def test_solve_puzzle_reports_parallel_callback_infeasible_with_common_status(self) -> None:
+        puzzle_data = PuzzleData.from_specs(
+            BoardSpec(rows=1, cols=1),
+            [CenterSpec.from_coordinates("g0", 0, 0)],
+        )
+        backend_result = CallbackParallelSolveResult(
+            success=False,
+            status=103,
+            message="CPLEX Error 1217: No solution exists.",
+            objective_value=None,
+            mip_gap=None,
+            mip_node_count=42,
+            assignment=None,
+            assignment_variable_values=None,
+            directed_flow_values=None,
+            source_flow_values=None,
+        )
+
+        with patch(
+            "galaxy_graph_lab.core.solver_service.solve_callback_parallel_model",
+            return_value=backend_result,
+        ):
+            result = solve_puzzle(puzzle_data, backend=PARALLEL_CALLBACK_SOLVER_BACKEND)
+
+        self.assertFalse(result.success)
+        self.assertEqual(result.backend_name, PARALLEL_CALLBACK_SOLVER_BACKEND)
+        self.assertEqual(result.status_code, 103)
+        self.assertEqual(result.status_label, SOLVER_STATUS_INFEASIBLE)
+        self.assertEqual(result.message, "No feasible solution exists for this puzzle.")
+        self.assertEqual(result.mip_node_count, 42)
+        self.assertIsNone(result.assignment)
+
+    def test_solve_puzzle_normalizes_parallel_callback_success_shape(self) -> None:
+        puzzle_data = PuzzleData.from_specs(
+            BoardSpec(rows=1, cols=1),
+            [CenterSpec.from_coordinates("g0", 0, 0)],
+        )
+        backend_result = CallbackParallelSolveResult(
+            success=True,
+            status=101,
+            message="optimal",
+            objective_value=0.0,
+            mip_gap=0.0,
+            mip_node_count=7,
+            assignment=self._single_cell_assignment(),
+            assignment_variable_values=(1.0,),
+            directed_flow_values={},
+            source_flow_values={},
+        )
+
+        with patch(
+            "galaxy_graph_lab.core.solver_service.solve_callback_parallel_model",
+            return_value=backend_result,
+        ):
+            result = solve_puzzle(puzzle_data, backend=PARALLEL_CALLBACK_SOLVER_BACKEND)
+
+        self.assertTrue(result.success)
+        self.assertEqual(result.backend_name, PARALLEL_CALLBACK_SOLVER_BACKEND)
+        self.assertEqual(result.status_code, 101)
+        self.assertEqual(result.status_label, SOLVER_STATUS_SOLVED)
+        self.assertEqual(result.message, "Solution found.")
+        self.assertEqual(result.objective_value, 0.0)
+        self.assertEqual(result.mip_gap, 0.0)
+        self.assertEqual(result.mip_node_count, 7)
+        self.assertEqual(result.assignment, backend_result.assignment)
+
     def test_solve_puzzle_reports_backend_unavailable(self) -> None:
         puzzle_data = PuzzleData.from_specs(
             BoardSpec(rows=1, cols=1),
@@ -203,6 +344,192 @@ class SolverServiceTests(unittest.TestCase):
             "Solver backend 'exact_flow' is unavailable: No module named 'scipy'.",
         )
         self.assertIsNone(result.assignment)
+
+    def test_solve_puzzle_dispatches_heuristic_backend(self) -> None:
+        puzzle_data = PuzzleData.from_specs(
+            BoardSpec(rows=1, cols=1),
+            [CenterSpec.from_coordinates("g0", 0, 0)],
+        )
+
+        result = solve_puzzle(puzzle_data, backend=HEURISTIC_ORBIT_SOLVER_BACKEND)
+
+        self.assertTrue(result.success)
+        self.assertEqual(result.backend_name, HEURISTIC_ORBIT_SOLVER_BACKEND)
+        self.assertEqual(result.status_label, SOLVER_STATUS_SOLVED)
+        self.assertEqual(result.message, "Solution found.")
+        self.assertIsNotNone(result.assignment)
+
+    def test_solve_puzzle_injects_backend_default_time_limits(self) -> None:
+        puzzle_data = PuzzleData.from_specs(
+            BoardSpec(rows=1, cols=1),
+            [CenterSpec.from_coordinates("g0", 0, 0)],
+        )
+        backend_result = FlowMilpSolveResult(
+            success=False,
+            status=2,
+            message="The problem is infeasible.",
+            objective_value=None,
+            mip_gap=None,
+            mip_node_count=None,
+            assignment=None,
+            assignment_variable_values=None,
+            directed_flow_values=None,
+            source_flow_values=None,
+        )
+        callback_result = CallbackParallelSolveResult(
+            success=False,
+            status=2,
+            message="The problem is infeasible.",
+            objective_value=None,
+            mip_gap=None,
+            mip_node_count=None,
+            assignment=None,
+            assignment_variable_values=None,
+            directed_flow_values=None,
+            source_flow_values=None,
+        )
+        heuristic_result = HeuristicOrbitSolveResult(
+            success=False,
+            status=2,
+            message="Heuristic time limit reached before a valid solution was found.",
+            objective_value=None,
+            mip_gap=None,
+            mip_node_count=None,
+            assignment=None,
+            attempt_count=1,
+        )
+
+        with patch(
+            "galaxy_graph_lab.core.solver_service.solve_flow_model",
+            return_value=backend_result,
+        ) as solve_flow_mock:
+            solve_puzzle(puzzle_data, backend=EXACT_FLOW_SOLVER_BACKEND)
+        with patch(
+            "galaxy_graph_lab.core.solver_service.solve_callback_parallel_model",
+            return_value=callback_result,
+        ) as solve_callback_mock:
+            solve_puzzle(puzzle_data, backend=PARALLEL_CALLBACK_SOLVER_BACKEND)
+        with patch(
+            "galaxy_graph_lab.core.solver_service.solve_heuristic_orbit_model",
+            return_value=heuristic_result,
+        ) as solve_heuristic_mock:
+            solve_puzzle(puzzle_data, backend=HEURISTIC_ORBIT_SOLVER_BACKEND)
+
+        solve_flow_mock.assert_called_once_with(
+            puzzle_data,
+            options={"time_limit": 0.5},
+        )
+        solve_callback_mock.assert_called_once_with(
+            puzzle_data,
+            options={"time_limit": 10.0},
+        )
+        solve_heuristic_mock.assert_called_once_with(
+            puzzle_data,
+            options={"time_limit": 100.0},
+            preferred_assignment_by_cell=None,
+            avoid_assignment_by_cell=None,
+            minimum_mismatches_against_avoid=None,
+            require_preferred_assignment=False,
+        )
+
+    def test_solve_puzzle_keeps_explicit_time_limit_override(self) -> None:
+        puzzle_data = PuzzleData.from_specs(
+            BoardSpec(rows=1, cols=1),
+            [CenterSpec.from_coordinates("g0", 0, 0)],
+        )
+        backend_result = FlowMilpSolveResult(
+            success=False,
+            status=2,
+            message="The problem is infeasible.",
+            objective_value=None,
+            mip_gap=None,
+            mip_node_count=None,
+            assignment=None,
+            assignment_variable_values=None,
+            directed_flow_values=None,
+            source_flow_values=None,
+        )
+
+        with patch(
+            "galaxy_graph_lab.core.solver_service.solve_flow_model",
+            return_value=backend_result,
+        ) as solve_flow_mock:
+            solve_puzzle(
+                puzzle_data,
+                options={"time_limit": 1.25, "threads": 2},
+            )
+
+        solve_flow_mock.assert_called_once_with(
+            puzzle_data,
+            options={"time_limit": 1.25, "threads": 2},
+        )
+
+    def test_solve_puzzle_normalizes_timeout_as_no_solution_for_all_backends(self) -> None:
+        puzzle_data = PuzzleData.from_specs(
+            BoardSpec(rows=1, cols=1),
+            [CenterSpec.from_coordinates("g0", 0, 0)],
+        )
+        exact_timeout = FlowMilpSolveResult(
+            success=False,
+            status=1,
+            message="Time limit reached.",
+            objective_value=None,
+            mip_gap=None,
+            mip_node_count=None,
+            assignment=None,
+            assignment_variable_values=None,
+            directed_flow_values=None,
+            source_flow_values=None,
+        )
+        callback_timeout = CallbackParallelSolveResult(
+            success=False,
+            status=1,
+            message="Time limit reached.",
+            objective_value=None,
+            mip_gap=None,
+            mip_node_count=None,
+            assignment=None,
+            assignment_variable_values=None,
+            directed_flow_values=None,
+            source_flow_values=None,
+        )
+        heuristic_timeout = HeuristicOrbitSolveResult(
+            success=False,
+            status=1,
+            message="Heuristic time limit reached before a valid solution was found.",
+            objective_value=None,
+            mip_gap=None,
+            mip_node_count=None,
+            assignment=None,
+            attempt_count=4,
+        )
+
+        with patch(
+            "galaxy_graph_lab.core.solver_service.solve_flow_model",
+            return_value=exact_timeout,
+        ):
+            exact_result = solve_puzzle(puzzle_data, backend=EXACT_FLOW_SOLVER_BACKEND)
+        with patch(
+            "galaxy_graph_lab.core.solver_service.solve_callback_parallel_model",
+            return_value=callback_timeout,
+        ):
+            callback_result = solve_puzzle(
+                puzzle_data,
+                backend=PARALLEL_CALLBACK_SOLVER_BACKEND,
+            )
+        with patch(
+            "galaxy_graph_lab.core.solver_service.solve_heuristic_orbit_model",
+            return_value=heuristic_timeout,
+        ):
+            heuristic_result = solve_puzzle(
+                puzzle_data,
+                backend=HEURISTIC_ORBIT_SOLVER_BACKEND,
+            )
+
+        for result in (exact_result, callback_result, heuristic_result):
+            self.assertFalse(result.success)
+            self.assertEqual(result.status_label, SOLVER_STATUS_INFEASIBLE)
+            self.assertEqual(result.message, "No feasible solution exists for this puzzle.")
 
     def test_solve_puzzle_reports_internal_solver_error(self) -> None:
         puzzle_data = PuzzleData.from_specs(

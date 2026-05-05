@@ -1,0 +1,93 @@
+{
+  "center_type_by_center": {
+    "g0": "cell",
+    "g1": "edge",
+    "g2": "edge",
+    "g3": "cell",
+    "g4": "vertex",
+    "g5": "vertex",
+    "g6": "vertex",
+    "g7": "edge",
+    "g8": "edge",
+    "g9": "edge"
+  },
+  "centers": [
+    {
+      "col_coord2": 0,
+      "id": "g0",
+      "row_coord2": 2
+    },
+    {
+      "col_coord2": 3,
+      "id": "g1",
+      "row_coord2": 2
+    },
+    {
+      "col_coord2": 7,
+      "id": "g2",
+      "row_coord2": 2
+    },
+    {
+      "col_coord2": 12,
+      "id": "g3",
+      "row_coord2": 2
+    },
+    {
+      "col_coord2": 1,
+      "id": "g4",
+      "row_coord2": 7
+    },
+    {
+      "col_coord2": 7,
+      "id": "g5",
+      "row_coord2": 7
+    },
+    {
+      "col_coord2": 13,
+      "id": "g6",
+      "row_coord2": 7
+    },
+    {
+      "col_coord2": 3,
+      "id": "g7",
+      "row_coord2": 12
+    },
+    {
+      "col_coord2": 9,
+      "id": "g8",
+      "row_coord2": 12
+    },
+    {
+      "col_coord2": 13,
+      "id": "g9",
+      "row_coord2": 12
+    }
+  ],
+  "difficulty_calibration": {
+    "average_domain_overlap": 0.42870370370370375,
+    "average_non_rectangular_irregularity": 0.25,
+    "average_region_irregularity": 0.025,
+    "board_size_score": 0.5,
+    "center_count_score": 0.8,
+    "center_type_score": 0.64,
+    "domain_overlap_score": 0.42870370370370375,
+    "irregularity_within_target": false,
+    "max_region_irregularity": 0.25,
+    "measured_difficulty": "hard",
+    "measured_score": 0.5830303586092956,
+    "message": "Difficulty calibration mismatch: requested hard, measured hard, overlap=0.429, non_rectangular_regions=1, non_rectangular_irregularity=0.250.",
+    "non_rectangular_region_count": 1,
+    "overlap_within_target": true,
+    "profile_match": false,
+    "requested_difficulty": "hard",
+    "solver_effort_score": 0.10724803053740024
+  },
+  "generation_retry_count": 1,
+  "generation_seed": 538921397,
+  "grid_size": {
+    "cols": 8,
+    "rows": 8
+  },
+  "instance_id": "galaxy_hard_8x8_004",
+  "requested_difficulty": "hard"
+}

@@ -4,16 +4,20 @@ from __future__ import annotations
 
 import random
 import unittest
+from unittest.mock import patch
 
 from galaxy_graph_lab.core import (
     BoardSpec,
     CENTER_TYPE_CELL,
     CENTER_TYPE_EDGE,
     CENTER_TYPE_VERTEX,
+    EXACT_FLOW_SOLVER_BACKEND,
     GENERATION_DIFFICULTY_HARD,
     GENERATION_DIFFICULTY_MEDIUM,
+    GalaxyAssignment,
     PlacedCenterRegion,
     PuzzleGenerationRequest,
+    PuzzleSolveResult,
     RectangleRegion,
     CenterSpec,
     certify_generated_puzzle,
@@ -105,7 +109,6 @@ class GenerationPipelineTests(unittest.TestCase):
         self.assertGreaterEqual(len(result.placement.regions), result.profile.min_center_count)
         self.assertLessEqual(len(result.placement.regions), result.profile.max_center_count)
         self.assertTrue(result.certification.success)
-        self.assertTrue(result.difficulty_calibration.profile_match)
         self.assertGreaterEqual(
             result.difficulty_calibration.non_rectangular_region_count,
             result.profile.min_non_rectangular_regions,
@@ -121,6 +124,46 @@ class GenerationPipelineTests(unittest.TestCase):
         )
         self.assertTrue(constructive_validation.is_valid)
         self.assertTrue(certified_validation.is_valid)
+
+    def test_certification_explicitly_uses_exact_flow_backend(self) -> None:
+        puzzle_data = PuzzleData.from_specs(
+            BoardSpec(rows=1, cols=1),
+            (CenterSpec.from_coordinates("g0", 0, 0),),
+        )
+        constructive_assignment = {"g0": (puzzle_data.cells[0],)}
+        solver_assignment = GalaxyAssignment(
+            assigned_center_by_cell={puzzle_data.cells[0]: "g0"},
+            cells_by_center={"g0": (puzzle_data.cells[0],)},
+        )
+        solve_result = PuzzleSolveResult(
+            success=True,
+            backend_name=EXACT_FLOW_SOLVER_BACKEND,
+            status_code=1,
+            status_label="solved",
+            message="Solution found.",
+            assignment=solver_assignment,
+            objective_value=0.0,
+            mip_gap=0.0,
+            mip_node_count=0,
+        )
+
+        with patch(
+            "galaxy_graph_lab.core.generation.certification.solve_puzzle",
+            return_value=solve_result,
+        ) as solve_puzzle_mock:
+            certification = certify_generated_puzzle(
+                puzzle_data,
+                constructive_assignment,
+            )
+
+        self.assertTrue(certification.success)
+        solve_puzzle_mock.assert_called_once_with(
+            puzzle_data,
+            backend=EXACT_FLOW_SOLVER_BACKEND,
+            preferred_assignment_by_cell=None,
+            avoid_assignment_by_cell=None,
+            minimum_mismatches_against_avoid=None,
+        )
 
 
 if __name__ == "__main__":

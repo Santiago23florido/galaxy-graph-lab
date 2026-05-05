@@ -1,0 +1,87 @@
+{
+  "center_type_by_center": {
+    "g0": "vertex",
+    "g1": "cell",
+    "g2": "edge",
+    "g3": "cell",
+    "g4": "cell",
+    "g5": "edge",
+    "g6": "cell",
+    "g7": "edge",
+    "g8": "cell"
+  },
+  "centers": [
+    {
+      "col_coord2": 5,
+      "id": "g0",
+      "row_coord2": 3
+    },
+    {
+      "col_coord2": 16,
+      "id": "g1",
+      "row_coord2": 4
+    },
+    {
+      "col_coord2": 2,
+      "id": "g2",
+      "row_coord2": 11
+    },
+    {
+      "col_coord2": 8,
+      "id": "g3",
+      "row_coord2": 14
+    },
+    {
+      "col_coord2": 14,
+      "id": "g4",
+      "row_coord2": 12
+    },
+    {
+      "col_coord2": 19,
+      "id": "g5",
+      "row_coord2": 12
+    },
+    {
+      "col_coord2": 2,
+      "id": "g6",
+      "row_coord2": 18
+    },
+    {
+      "col_coord2": 13,
+      "id": "g7",
+      "row_coord2": 18
+    },
+    {
+      "col_coord2": 18,
+      "id": "g8",
+      "row_coord2": 18
+    }
+  ],
+  "difficulty_calibration": {
+    "average_domain_overlap": 0.3002469135802469,
+    "average_non_rectangular_irregularity": 0.0,
+    "average_region_irregularity": 0.0,
+    "board_size_score": 0.5,
+    "center_count_score": 0.7,
+    "center_type_score": 0.4222222222222222,
+    "domain_overlap_score": 0.3002469135802469,
+    "irregularity_within_target": true,
+    "max_region_irregularity": 0.0,
+    "measured_difficulty": "medium",
+    "measured_score": 0.48439217383463234,
+    "message": "Difficulty calibration matched the requested profile.",
+    "non_rectangular_region_count": 0,
+    "overlap_within_target": true,
+    "profile_match": true,
+    "requested_difficulty": "easy",
+    "solver_effort_score": 0.09910692353150921
+  },
+  "generation_retry_count": 0,
+  "generation_seed": 538867637,
+  "grid_size": {
+    "cols": 11,
+    "rows": 11
+  },
+  "instance_id": "galaxy_easy_11x11_004",
+  "requested_difficulty": "easy"
+}
