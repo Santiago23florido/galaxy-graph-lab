@@ -63,6 +63,11 @@ class SolverSessionState:
         self.solver_message = self.solver_result.message
         return self.solver_result
 
+    def prime_cached_result(self, solve_result: PuzzleSolveResult) -> None:
+        self.solver_result = solve_result
+        self.solver_status_label = solve_result.status_label
+        self.solver_message = solve_result.message
+
     def capture_manual_snapshot(
         self,
         assigned_center_by_cell: Mapping[Cell, str],

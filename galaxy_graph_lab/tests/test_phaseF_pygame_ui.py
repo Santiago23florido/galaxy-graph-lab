@@ -271,6 +271,43 @@ class PhaseFPygameUiTests(unittest.TestCase):
         self.assertEqual(game_state.assigned_center_by_cell[Cell(1, 0)], "B")
         self.assertTrue(solver_session.can_restore_manual_snapshot)
 
+    def test_request_solution_for_current_board_uses_cached_solver_result(self) -> None:
+        puzzle_data = PuzzleData.from_specs(
+            BoardSpec(rows=1, cols=1),
+            (CenterSpec.from_coordinates("A", 0, 0),),
+        )
+        game_state = EditablePuzzleState.from_center_ids(("A",))
+        solver_session = SolverSessionState()
+        cached_result = PuzzleSolveResult(
+            success=True,
+            backend_name="exact_flow",
+            status_code=1,
+            status_label="solved",
+            message="cached",
+            assignment=GalaxyAssignment(
+                assigned_center_by_cell={Cell(0, 0): "A"},
+                cells_by_center={"A": (Cell(0, 0),)},
+            ),
+            objective_value=0.0,
+            mip_gap=0.0,
+            mip_node_count=0,
+        )
+        solver_session.prime_cached_result(cached_result)
+
+        with patch.object(
+            SolverSessionState,
+            "request_solution",
+        ) as request_solution_mock:
+            solved = request_solution_for_current_board(
+                puzzle_data,
+                game_state,
+                solver_session,
+            )
+
+        request_solution_mock.assert_not_called()
+        self.assertTrue(solved)
+        self.assertEqual(game_state.assigned_center_by_cell[Cell(0, 0)], "A")
+
     def test_restore_manual_board_state_restores_the_snapshot(self) -> None:
         game_state = EditablePuzzleState.from_center_ids(("A", "B"))
         solver_session = SolverSessionState()
