@@ -1,0 +1,81 @@
+{
+  "center_type_by_center": {
+    "g0": "edge",
+    "g1": "edge",
+    "g2": "vertex",
+    "g3": "cell",
+    "g4": "cell",
+    "g5": "edge",
+    "g6": "cell",
+    "g7": "cell"
+  },
+  "centers": [
+    {
+      "col_coord2": 4,
+      "id": "g0",
+      "row_coord2": 3
+    },
+    {
+      "col_coord2": 16,
+      "id": "g1",
+      "row_coord2": 5
+    },
+    {
+      "col_coord2": 11,
+      "id": "g2",
+      "row_coord2": 9
+    },
+    {
+      "col_coord2": 4,
+      "id": "g3",
+      "row_coord2": 10
+    },
+    {
+      "col_coord2": 16,
+      "id": "g4",
+      "row_coord2": 12
+    },
+    {
+      "col_coord2": 1,
+      "id": "g5",
+      "row_coord2": 16
+    },
+    {
+      "col_coord2": 6,
+      "id": "g6",
+      "row_coord2": 16
+    },
+    {
+      "col_coord2": 16,
+      "id": "g7",
+      "row_coord2": 16
+    }
+  ],
+  "difficulty_calibration": {
+    "average_domain_overlap": 0.3528061224489796,
+    "average_non_rectangular_irregularity": 0.34523809523809523,
+    "average_region_irregularity": 0.21577380952380953,
+    "board_size_score": 0.5,
+    "center_count_score": 0.6,
+    "center_type_score": 0.45,
+    "domain_overlap_score": 0.3528061224489796,
+    "irregularity_within_target": false,
+    "max_region_irregularity": 0.55,
+    "measured_difficulty": "medium",
+    "measured_score": 0.46328827697751784,
+    "message": "Difficulty calibration mismatch: requested medium, measured medium, overlap=0.353, non_rectangular_regions=5, non_rectangular_irregularity=0.345.",
+    "non_rectangular_region_count": 5,
+    "overlap_within_target": true,
+    "profile_match": false,
+    "requested_difficulty": "medium",
+    "solver_effort_score": 0.103673586101709
+  },
+  "generation_retry_count": 32,
+  "generation_seed": 538899125,
+  "grid_size": {
+    "cols": 10,
+    "rows": 10
+  },
+  "instance_id": "galaxy_medium_10x10_006",
+  "requested_difficulty": "medium"
+}

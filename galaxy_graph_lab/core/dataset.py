@@ -4,6 +4,7 @@ import json
 import random
 import secrets
 import time
+from itertools import combinations
 from collections.abc import Mapping
 from collections.abc import Callable
 from dataclasses import asdict, dataclass
@@ -31,6 +32,7 @@ from .solver_service import (
     DEFAULT_SOLVER_BACKEND,
     PARALLEL_CALLBACK_SOLVER_BACKEND,
     EXACT_FLOW_SOLVER_BACKEND,
+    HEURISTIC_ORBIT_SOLVER_BACKEND,
     PuzzleSolveResult,
     SOLVER_STATUS_BACKEND_UNAVAILABLE,
     SOLVER_STATUS_ERROR,
@@ -59,8 +61,11 @@ DEFAULT_DATASET_REFERENCE_DIMENSION_COUNT = 5
 DEFAULT_DATASET_REFERENCE_DIMENSION_STEP = 2
 DEFAULT_DATASET_REFERENCE_SEARCH_MAX_SIDE = 31
 DATASET_SOLVE_BACKEND_BOTH = "both"
+DATASET_SOLVE_BACKEND_ALL = "all"
 SUPPORTED_DATASET_SOLVER_BACKENDS = frozenset(
-    set(SUPPORTED_SOLVER_BACKENDS).union({DATASET_SOLVE_BACKEND_BOTH})
+    set(SUPPORTED_SOLVER_BACKENDS).union(
+        {DATASET_SOLVE_BACKEND_BOTH, DATASET_SOLVE_BACKEND_ALL}
+    )
 )
 DEFAULT_DATASET_REFERENCE_SEARCH_START_SIDE_BY_DIFFICULTY = MappingProxyType(
     {
@@ -103,6 +108,19 @@ def _freeze_nested_string_mapping(
             for outer_key, inner_mapping in data.items()
         }
     )
+
+
+def _json_ready(value: object) -> object:
+    if isinstance(value, Mapping):
+        return {
+            str(key): _json_ready(inner_value)
+            for key, inner_value in value.items()
+        }
+    if isinstance(value, tuple):
+        return [_json_ready(item) for item in value]
+    if isinstance(value, list):
+        return [_json_ready(item) for item in value]
+    return value
 
 
 def _bool_as_text(value: bool) -> str:
@@ -671,6 +689,12 @@ def _normalize_dataset_solver_backends(
             EXACT_FLOW_SOLVER_BACKEND,
             PARALLEL_CALLBACK_SOLVER_BACKEND,
         )
+    if solver_backend == DATASET_SOLVE_BACKEND_ALL:
+        return (
+            EXACT_FLOW_SOLVER_BACKEND,
+            PARALLEL_CALLBACK_SOLVER_BACKEND,
+            HEURISTIC_ORBIT_SOLVER_BACKEND,
+        )
     if solver_backend not in SUPPORTED_SOLVER_BACKENDS:
         raise ValueError(f"Unsupported dataset solver backend: {solver_backend}.")
     return (solver_backend,)
@@ -1029,6 +1053,22 @@ def find_hard_threshold_limit(
                 solve_result.assignment.cells_by_center,
             ).is_valid
         ):
+            if solve_time >= threshold_seconds:
+                return HardThresholdSearchResult(
+                    success=True,
+                    message=(
+                        "Hard-threshold search completed: the threshold is first exceeded at "
+                        f"{_grid_label(grid_size)}."
+                    ),
+                    threshold_seconds=threshold_seconds,
+                    solver_backend=solver_backend,
+                    start_side=start_side,
+                    max_side=max_side,
+                    max_solved_grid_size=max_solved_grid_size,
+                    max_solved_solve_time=max_solved_solve_time,
+                    first_exceeding_grid_size=grid_size,
+                    first_exceeding_solve_time=solve_time,
+                )
             return HardThresholdSearchResult(
                 success=False,
                 message=(
@@ -1639,51 +1679,72 @@ def solve_dataset(
     if len(selected_solver_backends) >= 2:
         baseline_backend = selected_solver_backends[0]
         comparison_backend = selected_solver_backends[1]
-        time_differences_by_difficulty: dict[str, list[float]] = {}
-        instances_solved_by_both = 0
-        success_status_disagreement_count = 0
-        structural_validity_disagreement_count = 0
 
-        for instance_id, record_map in records_by_instance_and_backend.items():
-            baseline_record = record_map.get(baseline_backend)
-            comparison_record = record_map.get(comparison_backend)
-            if baseline_record is None or comparison_record is None:
-                continue
-            if (
-                baseline_record.solve_result.status_label == SOLVER_STATUS_SOLVED
-                and comparison_record.solve_result.status_label == SOLVER_STATUS_SOLVED
-            ):
-                instances_solved_by_both += 1
-            if baseline_record.solve_result.success != comparison_record.solve_result.success:
-                success_status_disagreement_count += 1
-            if (
-                baseline_record.is_structurally_valid
-                != comparison_record.is_structurally_valid
-            ):
-                structural_validity_disagreement_count += 1
-            time_differences_by_difficulty.setdefault(
-                baseline_record.requested_difficulty,
-                [],
-            ).append(comparison_record.solve_time - baseline_record.solve_time)
+        def _pairwise_summary(
+            left_backend: str,
+            right_backend: str,
+        ) -> Mapping[str, object]:
+            time_differences_by_difficulty: dict[str, list[float]] = {}
+            instances_solved_by_both = 0
+            success_status_disagreement_count = 0
+            structural_validity_disagreement_count = 0
 
+            for record_map in records_by_instance_and_backend.values():
+                left_record = record_map.get(left_backend)
+                right_record = record_map.get(right_backend)
+                if left_record is None or right_record is None:
+                    continue
+                if (
+                    left_record.solve_result.status_label == SOLVER_STATUS_SOLVED
+                    and right_record.solve_result.status_label == SOLVER_STATUS_SOLVED
+                ):
+                    instances_solved_by_both += 1
+                if left_record.solve_result.success != right_record.solve_result.success:
+                    success_status_disagreement_count += 1
+                if left_record.is_structurally_valid != right_record.is_structurally_valid:
+                    structural_validity_disagreement_count += 1
+                time_differences_by_difficulty.setdefault(
+                    left_record.requested_difficulty,
+                    [],
+                ).append(right_record.solve_time - left_record.solve_time)
+
+            return _freeze_mapping(
+                {
+                    "time_difference_reference_pair": (
+                        left_backend,
+                        right_backend,
+                    ),
+                    "instances_solved_by_both": instances_solved_by_both,
+                    "average_time_difference_by_difficulty": MappingProxyType(
+                        {
+                            difficulty: (sum(values) / len(values))
+                            for difficulty, values in time_differences_by_difficulty.items()
+                            if values
+                        }
+                    ),
+                    "success_status_disagreement_count": success_status_disagreement_count,
+                    "structural_validity_disagreement_count": (
+                        structural_validity_disagreement_count
+                    ),
+                }
+            )
+
+        pairwise_comparison = {
+            f"{left_backend}__vs__{right_backend}": dict(
+                _pairwise_summary(
+                    left_backend,
+                    right_backend,
+                )
+            )
+            for left_backend, right_backend in combinations(selected_solver_backends, 2)
+        }
+        reference_pair_summary = pairwise_comparison[
+            f"{baseline_backend}__vs__{comparison_backend}"
+        ]
         comparison_summary = _freeze_mapping(
             {
-                "time_difference_reference_pair": (
-                    baseline_backend,
-                    comparison_backend,
-                ),
-                "instances_solved_by_both": instances_solved_by_both,
-                "average_time_difference_by_difficulty": MappingProxyType(
-                    {
-                        difficulty: (sum(values) / len(values))
-                        for difficulty, values in time_differences_by_difficulty.items()
-                        if values
-                    }
-                ),
-                "success_status_disagreement_count": success_status_disagreement_count,
-                "structural_validity_disagreement_count": (
-                    structural_validity_disagreement_count
-                ),
+                **dict(reference_pair_summary),
+                "pairwise": MappingProxyType(dict(pairwise_comparison)),
             }
         )
     else:
@@ -1717,16 +1778,7 @@ def solve_dataset(
         },
         "average_mip_gap_by_backend": dict(average_mip_gap_by_backend),
         "average_mip_node_count_by_backend": dict(average_mip_node_count_by_backend),
-        "comparison": {
-            key: (
-                dict(value)
-                if isinstance(value, Mapping)
-                else list(value)
-                if isinstance(value, tuple)
-                else value
-            )
-            for key, value in comparison_summary.items()
-        },
+        "comparison": _json_ready(comparison_summary),
         "result_files": [str(record.result_path.relative_to(output_dir)) for record in records],
     }
     summary_path.write_text(
@@ -1773,6 +1825,7 @@ __all__ = [
     "DEFAULT_GENERATION_RETRIES",
     "DEFAULT_GENERATION_SEED_SWEEP",
     "DEFAULT_INSTANCE_SEED_BLOCKS",
+    "DATASET_SOLVE_BACKEND_ALL",
     "DATASET_SOLVE_BACKEND_BOTH",
     "DataSetGenerationResult",
     "DataSetSolveResult",

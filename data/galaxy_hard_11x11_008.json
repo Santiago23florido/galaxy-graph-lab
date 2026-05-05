@@ -1,0 +1,117 @@
+{
+  "center_type_by_center": {
+    "g0": "vertex",
+    "g1": "edge",
+    "g10": "cell",
+    "g11": "edge",
+    "g12": "vertex",
+    "g13": "vertex",
+    "g2": "vertex",
+    "g3": "vertex",
+    "g4": "cell",
+    "g5": "edge",
+    "g6": "edge",
+    "g7": "edge",
+    "g8": "cell",
+    "g9": "edge"
+  },
+  "centers": [
+    {
+      "col_coord2": 1,
+      "id": "g0",
+      "row_coord2": 1
+    },
+    {
+      "col_coord2": 6,
+      "id": "g1",
+      "row_coord2": 3
+    },
+    {
+      "col_coord2": 15,
+      "id": "g2",
+      "row_coord2": 3
+    },
+    {
+      "col_coord2": 1,
+      "id": "g3",
+      "row_coord2": 7
+    },
+    {
+      "col_coord2": 6,
+      "id": "g4",
+      "row_coord2": 8
+    },
+    {
+      "col_coord2": 11,
+      "id": "g5",
+      "row_coord2": 12
+    },
+    {
+      "col_coord2": 15,
+      "id": "g6",
+      "row_coord2": 12
+    },
+    {
+      "col_coord2": 19,
+      "id": "g7",
+      "row_coord2": 12
+    },
+    {
+      "col_coord2": 6,
+      "id": "g8",
+      "row_coord2": 12
+    },
+    {
+      "col_coord2": 1,
+      "id": "g9",
+      "row_coord2": 16
+    },
+    {
+      "col_coord2": 4,
+      "id": "g10",
+      "row_coord2": 18
+    },
+    {
+      "col_coord2": 7,
+      "id": "g11",
+      "row_coord2": 18
+    },
+    {
+      "col_coord2": 13,
+      "id": "g12",
+      "row_coord2": 19
+    },
+    {
+      "col_coord2": 19,
+      "id": "g13",
+      "row_coord2": 19
+    }
+  ],
+  "difficulty_calibration": {
+    "average_domain_overlap": 0.35481132623989764,
+    "average_non_rectangular_irregularity": 0.1333333333333333,
+    "average_region_irregularity": 0.009523809523809521,
+    "board_size_score": 0.5,
+    "center_count_score": 1.0,
+    "center_type_score": 0.6571428571428571,
+    "domain_overlap_score": 0.35481132623989764,
+    "irregularity_within_target": false,
+    "max_region_irregularity": 0.1333333333333333,
+    "measured_difficulty": "hard",
+    "measured_score": 0.6439724808209244,
+    "message": "Difficulty calibration mismatch: requested hard, measured hard, overlap=0.355, non_rectangular_regions=1, non_rectangular_irregularity=0.133.",
+    "non_rectangular_region_count": 1,
+    "overlap_within_target": true,
+    "profile_match": false,
+    "requested_difficulty": "hard",
+    "solver_effort_score": 0.09322210456368424
+  },
+  "generation_retry_count": 4,
+  "generation_seed": 538945973,
+  "grid_size": {
+    "cols": 11,
+    "rows": 11
+  },
+  "instance_id": "galaxy_hard_11x11_008",
+  "requested_difficulty": "hard"
+}

@@ -1,0 +1,117 @@
+{
+  "center_type_by_center": {
+    "g0": "cell",
+    "g1": "cell",
+    "g10": "vertex",
+    "g11": "vertex",
+    "g12": "vertex",
+    "g13": "edge",
+    "g2": "cell",
+    "g3": "cell",
+    "g4": "edge",
+    "g5": "edge",
+    "g6": "edge",
+    "g7": "edge",
+    "g8": "vertex",
+    "g9": "edge"
+  },
+  "centers": [
+    {
+      "col_coord2": 2,
+      "id": "g0",
+      "row_coord2": 2
+    },
+    {
+      "col_coord2": 8,
+      "id": "g1",
+      "row_coord2": 2
+    },
+    {
+      "col_coord2": 12,
+      "id": "g2",
+      "row_coord2": 2
+    },
+    {
+      "col_coord2": 16,
+      "id": "g3",
+      "row_coord2": 2
+    },
+    {
+      "col_coord2": 1,
+      "id": "g4",
+      "row_coord2": 8
+    },
+    {
+      "col_coord2": 7,
+      "id": "g5",
+      "row_coord2": 8
+    },
+    {
+      "col_coord2": 13,
+      "id": "g6",
+      "row_coord2": 8
+    },
+    {
+      "col_coord2": 17,
+      "id": "g7",
+      "row_coord2": 8
+    },
+    {
+      "col_coord2": 13,
+      "id": "g8",
+      "row_coord2": 13
+    },
+    {
+      "col_coord2": 17,
+      "id": "g9",
+      "row_coord2": 14
+    },
+    {
+      "col_coord2": 3,
+      "id": "g10",
+      "row_coord2": 15
+    },
+    {
+      "col_coord2": 9,
+      "id": "g11",
+      "row_coord2": 15
+    },
+    {
+      "col_coord2": 13,
+      "id": "g12",
+      "row_coord2": 17
+    },
+    {
+      "col_coord2": 17,
+      "id": "g13",
+      "row_coord2": 18
+    }
+  ],
+  "difficulty_calibration": {
+    "average_domain_overlap": 0.34021018663875807,
+    "average_non_rectangular_irregularity": 0.13095238095238093,
+    "average_region_irregularity": 0.018707482993197275,
+    "board_size_score": 0.5,
+    "center_count_score": 1.0,
+    "center_type_score": 0.6,
+    "domain_overlap_score": 0.34021018663875807,
+    "irregularity_within_target": true,
+    "max_region_irregularity": 0.16666666666666663,
+    "measured_difficulty": "hard",
+    "measured_score": 0.6305988540553371,
+    "message": "Difficulty calibration matched the requested profile.",
+    "non_rectangular_region_count": 2,
+    "overlap_within_target": true,
+    "profile_match": true,
+    "requested_difficulty": "hard",
+    "solver_effort_score": 0.09567326059523501
+  },
+  "generation_retry_count": 0,
+  "generation_seed": 538939061,
+  "grid_size": {
+    "cols": 10,
+    "rows": 10
+  },
+  "instance_id": "galaxy_hard_10x10_010",
+  "requested_difficulty": "hard"
+}

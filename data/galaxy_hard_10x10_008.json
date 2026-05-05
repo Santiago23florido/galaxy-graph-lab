@@ -1,0 +1,105 @@
+{
+  "center_type_by_center": {
+    "g0": "edge",
+    "g1": "edge",
+    "g10": "edge",
+    "g11": "cell",
+    "g2": "edge",
+    "g3": "edge",
+    "g4": "vertex",
+    "g5": "vertex",
+    "g6": "vertex",
+    "g7": "vertex",
+    "g8": "edge",
+    "g9": "cell"
+  },
+  "centers": [
+    {
+      "col_coord2": 1,
+      "id": "g0",
+      "row_coord2": 2
+    },
+    {
+      "col_coord2": 5,
+      "id": "g1",
+      "row_coord2": 2
+    },
+    {
+      "col_coord2": 9,
+      "id": "g2",
+      "row_coord2": 2
+    },
+    {
+      "col_coord2": 15,
+      "id": "g3",
+      "row_coord2": 2
+    },
+    {
+      "col_coord2": 3,
+      "id": "g4",
+      "row_coord2": 7
+    },
+    {
+      "col_coord2": 9,
+      "id": "g5",
+      "row_coord2": 7
+    },
+    {
+      "col_coord2": 13,
+      "id": "g6",
+      "row_coord2": 7
+    },
+    {
+      "col_coord2": 17,
+      "id": "g7",
+      "row_coord2": 7
+    },
+    {
+      "col_coord2": 4,
+      "id": "g8",
+      "row_coord2": 11
+    },
+    {
+      "col_coord2": 14,
+      "id": "g9",
+      "row_coord2": 14
+    },
+    {
+      "col_coord2": 1,
+      "id": "g10",
+      "row_coord2": 16
+    },
+    {
+      "col_coord2": 6,
+      "id": "g11",
+      "row_coord2": 16
+    }
+  ],
+  "difficulty_calibration": {
+    "average_domain_overlap": 0.381986531986532,
+    "average_non_rectangular_irregularity": 0.2666666666666667,
+    "average_region_irregularity": 0.022222222222222227,
+    "board_size_score": 0.5,
+    "center_count_score": 1.0,
+    "center_type_score": 0.6666666666666666,
+    "domain_overlap_score": 0.381986531986532,
+    "irregularity_within_target": false,
+    "max_region_irregularity": 0.2666666666666667,
+    "measured_difficulty": "hard",
+    "measured_score": 0.6504064646697179,
+    "message": "Difficulty calibration mismatch: requested hard, measured hard, overlap=0.382, non_rectangular_regions=1, non_rectangular_irregularity=0.267.",
+    "non_rectangular_region_count": 1,
+    "overlap_within_target": true,
+    "profile_match": false,
+    "requested_difficulty": "hard",
+    "solver_effort_score": 0.09775151538404754
+  },
+  "generation_retry_count": 6,
+  "generation_seed": 538938293,
+  "grid_size": {
+    "cols": 10,
+    "rows": 10
+  },
+  "instance_id": "galaxy_hard_10x10_008",
+  "requested_difficulty": "hard"
+}

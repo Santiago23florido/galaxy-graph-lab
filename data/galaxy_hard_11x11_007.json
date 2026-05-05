@@ -1,0 +1,111 @@
+{
+  "center_type_by_center": {
+    "g0": "edge",
+    "g1": "vertex",
+    "g10": "vertex",
+    "g11": "vertex",
+    "g12": "edge",
+    "g2": "vertex",
+    "g3": "edge",
+    "g4": "edge",
+    "g5": "cell",
+    "g6": "cell",
+    "g7": "edge",
+    "g8": "cell",
+    "g9": "edge"
+  },
+  "centers": [
+    {
+      "col_coord2": 9,
+      "id": "g0",
+      "row_coord2": 0
+    },
+    {
+      "col_coord2": 1,
+      "id": "g1",
+      "row_coord2": 1
+    },
+    {
+      "col_coord2": 5,
+      "id": "g2",
+      "row_coord2": 1
+    },
+    {
+      "col_coord2": 16,
+      "id": "g3",
+      "row_coord2": 3
+    },
+    {
+      "col_coord2": 9,
+      "id": "g4",
+      "row_coord2": 4
+    },
+    {
+      "col_coord2": 4,
+      "id": "g5",
+      "row_coord2": 6
+    },
+    {
+      "col_coord2": 0,
+      "id": "g6",
+      "row_coord2": 8
+    },
+    {
+      "col_coord2": 9,
+      "id": "g7",
+      "row_coord2": 10
+    },
+    {
+      "col_coord2": 16,
+      "id": "g8",
+      "row_coord2": 10
+    },
+    {
+      "col_coord2": 4,
+      "id": "g9",
+      "row_coord2": 11
+    },
+    {
+      "col_coord2": 3,
+      "id": "g10",
+      "row_coord2": 17
+    },
+    {
+      "col_coord2": 9,
+      "id": "g11",
+      "row_coord2": 17
+    },
+    {
+      "col_coord2": 16,
+      "id": "g12",
+      "row_coord2": 17
+    }
+  ],
+  "difficulty_calibration": {
+    "average_domain_overlap": 0.42206959706959707,
+    "average_non_rectangular_irregularity": 0.07272727272727275,
+    "average_region_irregularity": 0.005594405594405596,
+    "board_size_score": 0.5,
+    "center_count_score": 1.0,
+    "center_type_score": 0.6307692307692307,
+    "domain_overlap_score": 0.42206959706959707,
+    "irregularity_within_target": false,
+    "max_region_irregularity": 0.07272727272727275,
+    "measured_difficulty": "hard",
+    "measured_score": 0.6488802866674696,
+    "message": "Difficulty calibration mismatch: requested hard, measured hard, overlap=0.422, non_rectangular_regions=1, non_rectangular_irregularity=0.073.",
+    "non_rectangular_region_count": 1,
+    "overlap_within_target": true,
+    "profile_match": false,
+    "requested_difficulty": "hard",
+    "solver_effort_score": 0.09416000953183801
+  },
+  "generation_retry_count": 3,
+  "generation_seed": 538945589,
+  "grid_size": {
+    "cols": 11,
+    "rows": 11
+  },
+  "instance_id": "galaxy_hard_11x11_007",
+  "requested_difficulty": "hard"
+}

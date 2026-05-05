@@ -19,6 +19,11 @@ from .flow_model import (
     SourceFlowKey,
     solve_flow_model,
 )
+from .heuristic_orbit_backend import solve_heuristic_orbit_model
+from .heuristic_orbit_model import (
+    HeuristicOrbitModel,
+    HeuristicOrbitSolveResult,
+)
 
 __all__ = [
     "AssignmentVariableKey",
@@ -32,8 +37,11 @@ __all__ = [
     "FlowMilpModel",
     "FlowMilpSolveResult",
     "GalaxyAssignment",
+    "HeuristicOrbitModel",
+    "HeuristicOrbitSolveResult",
     "SourceFlowKey",
     "solve_base_model",
     "solve_callback_parallel_model",
     "solve_flow_model",
+    "solve_heuristic_orbit_model",
 ]

@@ -1,0 +1,105 @@
+{
+  "center_type_by_center": {
+    "g0": "cell",
+    "g1": "edge",
+    "g10": "edge",
+    "g11": "edge",
+    "g2": "cell",
+    "g3": "edge",
+    "g4": "vertex",
+    "g5": "vertex",
+    "g6": "vertex",
+    "g7": "vertex",
+    "g8": "edge",
+    "g9": "edge"
+  },
+  "centers": [
+    {
+      "col_coord2": 2,
+      "id": "g0",
+      "row_coord2": 2
+    },
+    {
+      "col_coord2": 7,
+      "id": "g1",
+      "row_coord2": 2
+    },
+    {
+      "col_coord2": 12,
+      "id": "g2",
+      "row_coord2": 2
+    },
+    {
+      "col_coord2": 17,
+      "id": "g3",
+      "row_coord2": 2
+    },
+    {
+      "col_coord2": 1,
+      "id": "g4",
+      "row_coord2": 9
+    },
+    {
+      "col_coord2": 7,
+      "id": "g5",
+      "row_coord2": 9
+    },
+    {
+      "col_coord2": 13,
+      "id": "g6",
+      "row_coord2": 9
+    },
+    {
+      "col_coord2": 17,
+      "id": "g7",
+      "row_coord2": 9
+    },
+    {
+      "col_coord2": 1,
+      "id": "g8",
+      "row_coord2": 16
+    },
+    {
+      "col_coord2": 5,
+      "id": "g9",
+      "row_coord2": 16
+    },
+    {
+      "col_coord2": 11,
+      "id": "g10",
+      "row_coord2": 16
+    },
+    {
+      "col_coord2": 17,
+      "id": "g11",
+      "row_coord2": 16
+    }
+  ],
+  "difficulty_calibration": {
+    "average_domain_overlap": 0.34624819624819625,
+    "average_non_rectangular_irregularity": 0.16666666666666666,
+    "average_region_irregularity": 0.041666666666666664,
+    "board_size_score": 0.5,
+    "center_count_score": 1.0,
+    "center_type_score": 0.6666666666666666,
+    "domain_overlap_score": 0.34624819624819625,
+    "irregularity_within_target": true,
+    "max_region_irregularity": 0.25,
+    "measured_difficulty": "hard",
+    "measured_score": 0.6352705627705627,
+    "message": "Difficulty calibration matched the requested profile.",
+    "non_rectangular_region_count": 3,
+    "overlap_within_target": true,
+    "profile_match": true,
+    "requested_difficulty": "hard",
+    "solver_effort_score": 0.0
+  },
+  "generation_retry_count": 6,
+  "generation_seed": 538938677,
+  "grid_size": {
+    "cols": 10,
+    "rows": 10
+  },
+  "instance_id": "galaxy_hard_10x10_009",
+  "requested_difficulty": "hard"
+}

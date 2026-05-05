@@ -135,9 +135,10 @@ MILP builder remains responsible only for the local algebraic constraints,
 whereas the callback-style backend is responsible for incumbent inspection,
 graph-connectedness verification, and no-good cut generation. In the current
 system, \texttt{exact\_flow} remains the default exact backend used by the
-interactive game and by the certification stage of generation, while
-\texttt{parallel\_callback} is exposed as an alternative backend for comparative
-experiments and dataset benchmarking.
+interactive game, by the certification stage of generation, by the empirical
+hard-threshold search, and by the default dataset-construction workflow, while
+\texttt{parallel\_callback} is exposed as an alternative backend for
+comparative experiments and dataset benchmarking.
 
 \subsection{Constructive Generation}
 The approach then moves from estimating a solution for a particular puzzle instance to generating the instance itself in a structured and policy-aware manner. This process relies on exact certification to confirm that the final instance is mathematically sound.
@@ -169,31 +170,74 @@ profile override so that non-canonical board sizes remain governed by the same
 difficulty policy as the requested family while allowing the center-count range
 to scale with the board area.
 
-At the dataset level, \texttt{generate\_dataset()} now follows a two-stage
-selection protocol. First, the system searches only within the \texttt{hard}
-difficulty family for a reference board size whose solution time, under the
-selected screening backend, exceeds a prescribed threshold. Once such a
-reference dimension is found, a shared window of five odd board sizes is
-derived from it and reused for all requested difficulty levels. Consequently,
-the dataset does not define one independent size ladder per difficulty level;
-instead, it anchors the corpus to a single hard-reference scale and uses that
-scale to organize easy, medium, and hard instances consistently.
+At the experimental level, the implementation now separates two different
+dataset-oriented workflows. The first is \texttt{find\_hard\_threshold\_limit()},
+which answers the practical question of up to which square board size the
+instance remains solvable under a prescribed runtime threshold. This routine
+tests the \texttt{hard} family alone, starting from \(7\times 7\), increasing
+the side length by one unit at a time, generating one certified instance per
+size, and solving it with the exact backend \texttt{exact\_flow}. The search
+terminates when the observed solve time first exceeds the chosen threshold, so
+that the largest size still solved within the threshold becomes an empirical
+upper bound for that execution regime.
 
-Each candidate instance is then generated with a size-specific difficulty
-profile, certified as a valid puzzle, and screened again through the selected
-solver backend before being accepted into the corpus. This screening stage
-serves two purposes simultaneously: it guarantees that stored instances are
-actually solvable by the backend under study, and it filters the dataset by
-runtime so that the final corpus is biased toward nontrivial instances rather
-than merely valid ones. The generated manifest records the selected backend,
-the reference threshold, the discovered reference size, the effective board
-sizes used in the corpus, and the list of stored instances.
+The second workflow is the actual dataset-construction routine
+\texttt{generate\_dataset()}. In its current default configuration, this
+function no longer performs the threshold search internally. Instead, it builds
+a fixed corpus over the square sizes \(7\times 7\), \(8\times 8\),
+\(9\times 9\), \(10\times 10\), and \(11\times 11\). For each of these sizes
+and for each of the three difficulty levels, the generator attempts to obtain a
+prescribed number of valid instances, twenty by default. Every accepted
+instance is generated under a size-aware difficulty profile, certified as a
+valid puzzle, and screened with the selected backend before being stored.
+Consequently, the dataset command has become a reproducible fixed-range corpus
+builder rather than a threshold-discovery procedure.
 
-On the solving side, \texttt{solve\_instance()} solves a stored puzzle through a
-selected backend and exports compact diagnostic information. Similarly,
-\texttt{solve\_dataset()} iterates this process over an entire dataset while
-aggregating timing, status, and backend-specific metadata. Because the solving
-command can execute either \texttt{exact\_flow}, \texttt{parallel\_callback}, or
-both backends, the dataset layer acts not only as a persistence mechanism, but
-also as the empirical interface through which the two solution strategies can
-be compared under reproducible conditions.
+Because these board sizes extend the canonical profile sizes, the center-count
+interval must also be adapted to the board area. For a board with area
+\(A = N \cdot M\), the dataset layer first computes the nominal center count
+\(k_d^\star = \mathrm{round}(A / a_d)\), where \(a_d\) is the target area per
+center for difficulty \(d\). Then, a tolerance parameter \(\delta_d\) defines
+a narrow band around this nominal value. The lower bound is set to
+\(k_d^{\min} = \max(\underline{k}_d, k_d^\star - \delta_d)\), so that it never
+falls below the canonical minimum \(\underline{k}_d\). The upper bound starts
+from \(k_d^\star + \delta_d\), but is clipped by the feasibility cap
+\(\lfloor A / r_d \rfloor\), where \(r_d\) represents the minimum admissible
+area per region for that difficulty. Finally, the implementation enforces
+\(k_d^{\max} \geq k_d^{\min}\). In this way, larger boards receive
+proportionally more centers, while the qualitative density and structural
+character of each difficulty family remain stable across sizes.
+
+The manifest produced by the dataset layer records the active backend, the
+effective board sizes used in the corpus, the runtime filtering parameters, and
+the list of stored instances. On the solving side, \texttt{solve\_instance()}
+solves a stored puzzle through a selected backend and exports compact
+diagnostic information. Similarly, \texttt{solve\_dataset()} iterates this
+process over an entire dataset while aggregating timing, status, and
+backend-specific metadata. Because the solving command can execute
+\texttt{exact\_flow}, \texttt{parallel\_callback}, \texttt{heuristic\_orbit},
+or comparative multi-backend modes, the dataset layer acts not only as a
+persistence mechanism, but also as the empirical interface through which the
+three solution strategies can be compared under reproducible conditions.
+
+\subsection{Heuristic Model}
+A heuristic solution model is proposed for the system, implemented as a multi-start software procedure based on symmetric orbits. This approach follows a logic similar to the one previously described for instance generation. The central idea is that a valid galaxy must respect the \(180^\circ\) rotation around its center. Therefore, the minimal decision unit is not an individual cell \(u\), but rather the orbit associated with cell \(u\) and center \(g\), defined as
+
+\begin{equation}
+O_g(u) = \{u, \tau_g(u)\}.
+\label{eq:symmetric_orbit}
+\end{equation}
+
+In Eq.~\ref{eq:symmetric_orbit}, \(O_g(u)\) denotes the symmetric orbit induced by center \(g\), and \(\tau_g(u)\) is the cell obtained by applying the \(180^\circ\) rotation operator to \(u\). Thus, assigning or removing a cell from a candidate galaxy is performed at the orbit level, ensuring that rotational symmetry is preserved throughout the heuristic construction process.
+
+The solver starts from \texttt{PuzzleData}, which already contains the complete discrete geometry of the problem: cells, centers, admissible domains, kernels, symmetry twins, and the orthogonal adjacency graph. From this information, \texttt{HeuristicOrbitModel.from\_puzzle\_data()} constructs the data structures required by the heuristic search. The structure \texttt{orbit\_by\_center\_and\_cell} stores, for each center and each admissible cell, the corresponding symmetric orbit. The structure \texttt{unique\_orbits\_by\_center} deduplicates these orbits so that the same symmetric pair is not evaluated more than once. The structure \texttt{candidate\_centers\_by\_cell} records, for each cell, which centers may claim it according to admissibility. Finally, \texttt{target\_area\_by\_center} estimates a target size for each galaxy by summing fractional contributions of the form \(1/\operatorname{coverage}(u)\), so that a cell contributes less when it is admissible for many centers. The construction of heuristic solutions begins from the kernel of each center through \texttt{\_initial\_state()}. The internal state keeps two synchronized views of the partial assignment: \texttt{owner\_by\_cell}, which maps each cell to its current center, and \texttt{cells\_by\_center}, which maps each center to its current set of assigned cells. This allows the heuristic solver to reason both at the cell level and at the galaxy, or region, level. It is important to emphasize that every kernel cell must be fixed to its corresponding galaxy from the beginning. Then, in \texttt{\_construct\_assignment()}, while unassigned cells remain, the solver generates the list of candidate orbits, scores them, randomly selects one among the best-ranked alternatives, and adds it to a region.
+
+A candidate orbit is accepted only if it satisfies the predicate \texttt{\_can\_claim\_orbit()}. This predicate verifies that all cells in the orbit are admissible for the selected center, that none of them is already occupied by another galaxy, that the orbit contributes at least one new cell, that it locally touches the current region so that growth occurs through the boundary, and that adding it preserves connectivity in the graph. In this way, the heuristic attempts to preserve the main constraints of the model throughout the incremental growth of the regions. The scoring logic implemented in \texttt{\_candidate\_score()} combines several criteria. The term \texttt{ambiguity\_penalty} penalizes orbits that could be claimed by many centers, since higher ambiguity makes an assignment less reliable. The term \texttt{distance\_penalty} penalizes orbits that are far from the geometric center of the galaxy. The term \texttt{boundary\_growth\_penalty} measures how much the orbit increases the boundary of the region. The term \texttt{size\_penalty} penalizes deviations from the estimated target area. Conversely, \texttt{adjacency\_bonus} rewards orbits that are well attached to the current boundary. The term \texttt{preferred\_bonus} rewards orbits aligned with a preferred guide, whereas \texttt{preferred\_conflict\_penalty} penalizes orbits that contradict a mandatory preference. Finally, \texttt{avoid\_penalty} penalizes assignments that coincide with a guide that should be avoided.
+
+Therefore, the heuristic procedure does not merely fill the board. Instead, it biases the construction toward compact, symmetric, and connected regions, while preserving admissibility and respecting the orbit-based structure induced by the rotational geometry of the puzzle.
+
+Within the set of candidate orbits, the solver randomly selects one among the five best-ranked candidates. The purpose of this controlled randomness is to prevent the heuristic solutions from becoming overly rigid and to allow the exploration of different constructions across multiple starts.
+
+Once all board cells have been covered, a local improvement stage is applied through \texttt{\_local\_improvement()}. This procedure first identifies cells that are poorly aligned with \texttt{preferred\_assignment\_by\_cell}. If no such cells are found, it then examines cells that still coincide with \texttt{avoid\_assignment\_by\_cell}. For each candidate cell, the procedure attempts to move the corresponding orbit to another feasible center, revalidates the complete structure using \texttt{validate\_assignment()}, and accepts the move only if it improves the guide-based objective.
+
+In this way, the heuristic allows specific reassignment operations between regions, but only when the resulting assignment remains structurally valid. A final validation layer is then applied to verify that the solution produced by the heuristic model satisfies all required constraints.

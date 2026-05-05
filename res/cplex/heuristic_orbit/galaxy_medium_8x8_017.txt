@@ -1,0 +1,10 @@
+solveTime=0.020758
+isOptimal=true
+isStructurallyValid=true
+statusLabel=solved
+statusCode=0
+backend=heuristic_orbit
+requestedDifficulty=medium
+measuredDifficulty=medium
+gridSize=8x8
+objectiveValue=0.0

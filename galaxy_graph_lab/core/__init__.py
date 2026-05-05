@@ -3,6 +3,7 @@
 from .board import BoardSpec, Cell
 from .centers import CenterSpec
 from .dataset import (
+    DATASET_SOLVE_BACKEND_ALL,
     DATASET_SOLVE_BACKEND_BOTH,
     DEFAULT_CPLEX_RESULTS_DIR,
     DEFAULT_DATA_DIR,
@@ -91,15 +92,20 @@ from .milp import (
     FlowMilpModel,
     FlowMilpSolveResult,
     GalaxyAssignment,
+    HeuristicOrbitModel,
+    HeuristicOrbitSolveResult,
     SourceFlowKey,
     solve_base_model,
     solve_callback_parallel_model,
     solve_flow_model,
+    solve_heuristic_orbit_model,
 )
 from .model_data import PuzzleData
 from .solver_service import (
     DEFAULT_SOLVER_BACKEND,
+    DEFAULT_SOLVER_TIME_LIMIT_BY_BACKEND,
     EXACT_FLOW_SOLVER_BACKEND,
+    HEURISTIC_ORBIT_SOLVER_BACKEND,
     PARALLEL_CALLBACK_SOLVER_BACKEND,
     PuzzleSolveResult,
     SOLVER_STATUS_BACKEND_UNAVAILABLE,
@@ -131,6 +137,7 @@ __all__ = [
     "CenterPlacementResult",
     "CenterTypeMix",
     "CenterSpec",
+    "DATASET_SOLVE_BACKEND_ALL",
     "DATASET_SOLVE_BACKEND_BOTH",
     "DEFAULT_CPLEX_RESULTS_DIR",
     "DEFAULT_DATA_DIR",
@@ -173,6 +180,7 @@ __all__ = [
     "PuzzleGenerationResult",
     "RectangleRegion",
     "DEFAULT_SOLVER_BACKEND",
+    "DEFAULT_SOLVER_TIME_LIMIT_BY_BACKEND",
     "EXACT_FLOW_SOLVER_BACKEND",
     "BaseMilpModel",
     "BaseMilpSolveResult",
@@ -184,6 +192,9 @@ __all__ = [
     "FlowMilpModel",
     "FlowMilpSolveResult",
     "GalaxyAssignment",
+    "HeuristicOrbitModel",
+    "HeuristicOrbitSolveResult",
+    "HEURISTIC_ORBIT_SOLVER_BACKEND",
     "PARALLEL_CALLBACK_SOLVER_BACKEND",
     "PuzzleSolveResult",
     "SOLVER_STATUS_BACKEND_UNAVAILABLE",
@@ -232,4 +243,5 @@ __all__ = [
     "solve_base_model",
     "solve_callback_parallel_model",
     "solve_flow_model",
+    "solve_heuristic_orbit_model",
 ]

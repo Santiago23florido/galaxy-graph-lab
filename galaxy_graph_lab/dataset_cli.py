@@ -5,6 +5,7 @@ import re
 from pathlib import Path
 
 from .core import (
+    DATASET_SOLVE_BACKEND_ALL,
     BoardSpec,
     DATASET_SOLVE_BACKEND_BOTH,
     DEFAULT_CPLEX_RESULTS_DIR,
@@ -246,10 +247,11 @@ def _build_parser() -> argparse.ArgumentParser:
         default=DEFAULT_SOLVER_BACKEND,
         choices=(
             tuple(sorted(SUPPORTED_SOLVER_BACKENDS))
-            + (DATASET_SOLVE_BACKEND_BOTH,)
+            + (DATASET_SOLVE_BACKEND_BOTH, DATASET_SOLVE_BACKEND_ALL)
         ),
         help=(
-            "Solve with one backend or run both backends over every stored instance."
+            "Solve with one backend or run the predefined multi-backend modes "
+            "'both' (exact_flow + parallel_callback) or 'all'."
         ),
     )
 

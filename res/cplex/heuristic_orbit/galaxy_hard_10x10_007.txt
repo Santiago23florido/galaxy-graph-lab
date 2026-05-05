@@ -1,0 +1,9 @@
+solveTime=12.698487
+isOptimal=false
+isStructurallyValid=false
+statusLabel=infeasible
+statusCode=2
+backend=heuristic_orbit
+requestedDifficulty=hard
+measuredDifficulty=hard
+gridSize=10x10

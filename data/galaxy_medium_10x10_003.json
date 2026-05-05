@@ -1,0 +1,93 @@
+{
+  "center_type_by_center": {
+    "g0": "cell",
+    "g1": "edge",
+    "g2": "cell",
+    "g3": "edge",
+    "g4": "vertex",
+    "g5": "edge",
+    "g6": "vertex",
+    "g7": "edge",
+    "g8": "cell",
+    "g9": "cell"
+  },
+  "centers": [
+    {
+      "col_coord2": 2,
+      "id": "g0",
+      "row_coord2": 2
+    },
+    {
+      "col_coord2": 7,
+      "id": "g1",
+      "row_coord2": 2
+    },
+    {
+      "col_coord2": 14,
+      "id": "g2",
+      "row_coord2": 2
+    },
+    {
+      "col_coord2": 0,
+      "id": "g3",
+      "row_coord2": 9
+    },
+    {
+      "col_coord2": 5,
+      "id": "g4",
+      "row_coord2": 9
+    },
+    {
+      "col_coord2": 12,
+      "id": "g5",
+      "row_coord2": 9
+    },
+    {
+      "col_coord2": 17,
+      "id": "g6",
+      "row_coord2": 9
+    },
+    {
+      "col_coord2": 1,
+      "id": "g7",
+      "row_coord2": 16
+    },
+    {
+      "col_coord2": 6,
+      "id": "g8",
+      "row_coord2": 16
+    },
+    {
+      "col_coord2": 14,
+      "id": "g9",
+      "row_coord2": 16
+    }
+  ],
+  "difficulty_calibration": {
+    "average_domain_overlap": 0.3319312169312169,
+    "average_non_rectangular_irregularity": 0.35000000000000003,
+    "average_region_irregularity": 0.07,
+    "board_size_score": 0.5,
+    "center_count_score": 0.8,
+    "center_type_score": 0.52,
+    "domain_overlap_score": 0.3319312169312169,
+    "irregularity_within_target": false,
+    "max_region_irregularity": 0.4,
+    "measured_difficulty": "medium",
+    "measured_score": 0.5438225640458437,
+    "message": "Difficulty calibration mismatch: requested medium, measured medium, overlap=0.332, non_rectangular_regions=2, non_rectangular_irregularity=0.350.",
+    "non_rectangular_region_count": 2,
+    "overlap_within_target": true,
+    "profile_match": false,
+    "requested_difficulty": "medium",
+    "solver_effort_score": 0.10032881506161208
+  },
+  "generation_retry_count": 23,
+  "generation_seed": 538897973,
+  "grid_size": {
+    "cols": 10,
+    "rows": 10
+  },
+  "instance_id": "galaxy_medium_10x10_003",
+  "requested_difficulty": "medium"
+}

@@ -1,0 +1,51 @@
+{
+  "center_type_by_center": {
+    "g0": "edge",
+    "g1": "vertex",
+    "g2": "cell"
+  },
+  "centers": [
+    {
+      "col_coord2": 4,
+      "id": "g0",
+      "row_coord2": 3
+    },
+    {
+      "col_coord2": 11,
+      "id": "g1",
+      "row_coord2": 3
+    },
+    {
+      "col_coord2": 6,
+      "id": "g2",
+      "row_coord2": 10
+    }
+  ],
+  "difficulty_calibration": {
+    "average_domain_overlap": 0.0,
+    "average_non_rectangular_irregularity": 0.0,
+    "average_region_irregularity": 0.0,
+    "board_size_score": 0.5,
+    "center_count_score": 0.1,
+    "center_type_score": 0.6,
+    "domain_overlap_score": 0.0,
+    "irregularity_within_target": true,
+    "max_region_irregularity": 0.0,
+    "measured_difficulty": "easy",
+    "measured_score": 0.2688706771413142,
+    "message": "Difficulty calibration matched the requested profile.",
+    "non_rectangular_region_count": 0,
+    "overlap_within_target": true,
+    "profile_match": true,
+    "requested_difficulty": "easy",
+    "solver_effort_score": 0.13870677141314172
+  },
+  "generation_retry_count": 0,
+  "generation_seed": 538837301,
+  "grid_size": {
+    "cols": 7,
+    "rows": 7
+  },
+  "instance_id": "galaxy_easy_7x7_005",
+  "requested_difficulty": "easy"
+}

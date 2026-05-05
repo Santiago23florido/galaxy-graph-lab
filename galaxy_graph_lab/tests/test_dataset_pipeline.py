@@ -7,6 +7,7 @@ from unittest import mock
 
 from galaxy_graph_lab.core import dataset as dataset_module
 from galaxy_graph_lab.core import (
+    DATASET_SOLVE_BACKEND_ALL,
     BoardSpec,
     CenterSpec,
     Cell,
@@ -17,6 +18,7 @@ from galaxy_graph_lab.core import (
     GENERATION_DIFFICULTY_HARD,
     GENERATION_DIFFICULTY_MEDIUM,
     GalaxyAssignment,
+    HEURISTIC_ORBIT_SOLVER_BACKEND,
     PARALLEL_CALLBACK_SOLVER_BACKEND,
     PuzzleGenerationRequest,
     PuzzleSolveResult,
@@ -490,6 +492,58 @@ class DataSetPipelineTests(unittest.TestCase):
                 "parallel_callback/galaxy_easy_1x1_001.txt",
             },
         )
+
+    def test_solve_dataset_supports_all_backend_mode(self) -> None:
+        instance = self._stored_instance()
+
+        def fake_solve_puzzle(puzzle_data, *, backend, **_kwargs):
+            return PuzzleSolveResult(
+                success=True,
+                backend_name=backend,
+                status_code=1,
+                status_label="solved",
+                message="ok",
+                assignment=self._single_cell_assignment(),
+                objective_value=0.0,
+                mip_gap=0.0,
+                mip_node_count=0,
+            )
+
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            data_directory = Path(temporary_directory) / "data"
+            results_directory = Path(temporary_directory) / "res"
+            save_instance(instance, data_directory / "galaxy_easy_1x1_001.json")
+
+            with mock.patch.object(
+                dataset_module,
+                "solve_puzzle",
+                side_effect=fake_solve_puzzle,
+            ):
+                solve_result = solve_dataset(
+                    data_dir=data_directory,
+                    results_dir=results_directory,
+                    solver_backend=DATASET_SOLVE_BACKEND_ALL,
+                )
+
+        self.assertTrue(solve_result.success)
+        self.assertEqual(
+            solve_result.solver_backends,
+            (
+                EXACT_FLOW_SOLVER_BACKEND,
+                PARALLEL_CALLBACK_SOLVER_BACKEND,
+                HEURISTIC_ORBIT_SOLVER_BACKEND,
+            ),
+        )
+        self.assertEqual(len(solve_result.records), 3)
+        self.assertEqual(
+            set(solve_result.backend_summary_paths),
+            {
+                EXACT_FLOW_SOLVER_BACKEND,
+                PARALLEL_CALLBACK_SOLVER_BACKEND,
+                HEURISTIC_ORBIT_SOLVER_BACKEND,
+            },
+        )
+        self.assertIn("pairwise", solve_result.comparison_summary)
 
 
 if __name__ == "__main__":

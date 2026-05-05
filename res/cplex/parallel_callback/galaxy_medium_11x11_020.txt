@@ -1,0 +1,12 @@
+solveTime=0.039573
+isOptimal=true
+isStructurallyValid=true
+statusLabel=solved
+statusCode=0
+backend=parallel_callback
+requestedDifficulty=medium
+measuredDifficulty=hard
+gridSize=11x11
+objectiveValue=0.0
+mipGap=0.0
+mipNodeCount=1
