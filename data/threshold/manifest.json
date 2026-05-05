@@ -1,0 +1,214 @@
+{
+  "attempts": [
+    {
+      "generation_message": "Puzzle generated successfully. Difficulty calibration note: Difficulty calibration mismatch: requested hard, measured hard, overlap=0.368, non_rectangular_regions=1, non_rectangular_irregularity=0.267.",
+      "generation_seed_used": 1729960602,
+      "generation_success": true,
+      "generation_time_seconds": 3.428124886995647,
+      "grid_size": {
+        "cols": 7,
+        "rows": 7
+      },
+      "instance_id": "hard_threshold_7x7",
+      "instance_path": "data/threshold/hard_threshold_7x7.json",
+      "is_structurally_valid": true,
+      "seed_attempt_count": 1,
+      "solve_message": "Solution found.",
+      "solve_status_label": "solved",
+      "solve_success": true,
+      "solve_time_seconds": 0.01565445799496956
+    },
+    {
+      "generation_message": "Puzzle generated successfully.",
+      "generation_seed_used": 1729960986,
+      "generation_success": true,
+      "generation_time_seconds": 2.3964938939898275,
+      "grid_size": {
+        "cols": 8,
+        "rows": 8
+      },
+      "instance_id": "hard_threshold_8x8",
+      "instance_path": "data/threshold/hard_threshold_8x8.json",
+      "is_structurally_valid": true,
+      "seed_attempt_count": 1,
+      "solve_message": "Solution found.",
+      "solve_status_label": "solved",
+      "solve_success": true,
+      "solve_time_seconds": 0.018286423000972718
+    },
+    {
+      "generation_message": "Puzzle generated successfully. Difficulty calibration note: Difficulty calibration mismatch: requested hard, measured hard, overlap=0.341, non_rectangular_regions=1, non_rectangular_irregularity=0.083.",
+      "generation_seed_used": 1729961370,
+      "generation_success": true,
+      "generation_time_seconds": 1.5662942359922454,
+      "grid_size": {
+        "cols": 9,
+        "rows": 9
+      },
+      "instance_id": "hard_threshold_9x9",
+      "instance_path": "data/threshold/hard_threshold_9x9.json",
+      "is_structurally_valid": true,
+      "seed_attempt_count": 1,
+      "solve_message": "Solution found.",
+      "solve_status_label": "solved",
+      "solve_success": true,
+      "solve_time_seconds": 0.023268199001904577
+    },
+    {
+      "generation_message": "Puzzle generated successfully.",
+      "generation_seed_used": 1729961754,
+      "generation_success": true,
+      "generation_time_seconds": 0.8017051509814337,
+      "grid_size": {
+        "cols": 10,
+        "rows": 10
+      },
+      "instance_id": "hard_threshold_10x10",
+      "instance_path": "data/threshold/hard_threshold_10x10.json",
+      "is_structurally_valid": true,
+      "seed_attempt_count": 1,
+      "solve_message": "Solution found.",
+      "solve_status_label": "solved",
+      "solve_success": true,
+      "solve_time_seconds": 0.06849185499595478
+    },
+    {
+      "generation_message": "Puzzle generated successfully.",
+      "generation_seed_used": 1729962138,
+      "generation_success": true,
+      "generation_time_seconds": 1.9514776990108658,
+      "grid_size": {
+        "cols": 11,
+        "rows": 11
+      },
+      "instance_id": "hard_threshold_11x11",
+      "instance_path": "data/threshold/hard_threshold_11x11.json",
+      "is_structurally_valid": true,
+      "seed_attempt_count": 1,
+      "solve_message": "Solution found.",
+      "solve_status_label": "solved",
+      "solve_success": true,
+      "solve_time_seconds": 0.06080850001308136
+    },
+    {
+      "generation_message": "Puzzle generated successfully. Difficulty calibration note: Difficulty calibration mismatch: requested hard, measured hard, overlap=0.338, non_rectangular_regions=1, non_rectangular_irregularity=0.167.",
+      "generation_seed_used": 1729962522,
+      "generation_success": true,
+      "generation_time_seconds": 4.758636751997983,
+      "grid_size": {
+        "cols": 12,
+        "rows": 12
+      },
+      "instance_id": "hard_threshold_12x12",
+      "instance_path": "data/threshold/hard_threshold_12x12.json",
+      "is_structurally_valid": true,
+      "seed_attempt_count": 1,
+      "solve_message": "Solution found.",
+      "solve_status_label": "solved",
+      "solve_success": true,
+      "solve_time_seconds": 0.08772754098754376
+    },
+    {
+      "generation_message": "Puzzle generated successfully.",
+      "generation_seed_used": 1729962906,
+      "generation_success": true,
+      "generation_time_seconds": 7.7255229509901255,
+      "grid_size": {
+        "cols": 13,
+        "rows": 13
+      },
+      "instance_id": "hard_threshold_13x13",
+      "instance_path": "data/threshold/hard_threshold_13x13.json",
+      "is_structurally_valid": true,
+      "seed_attempt_count": 1,
+      "solve_message": "Solution found.",
+      "solve_status_label": "solved",
+      "solve_success": true,
+      "solve_time_seconds": 0.14016519498545676
+    },
+    {
+      "generation_message": "Puzzle generated successfully. Difficulty calibration note: Difficulty calibration mismatch: requested hard, measured hard, overlap=0.388, non_rectangular_regions=1, non_rectangular_irregularity=0.200.",
+      "generation_seed_used": 1729963290,
+      "generation_success": true,
+      "generation_time_seconds": 34.108712205983466,
+      "grid_size": {
+        "cols": 14,
+        "rows": 14
+      },
+      "instance_id": "hard_threshold_14x14",
+      "instance_path": "data/threshold/hard_threshold_14x14.json",
+      "is_structurally_valid": true,
+      "seed_attempt_count": 1,
+      "solve_message": "Solution found.",
+      "solve_status_label": "solved",
+      "solve_success": true,
+      "solve_time_seconds": 0.16183848297805525
+    },
+    {
+      "generation_message": "Puzzle generated successfully.",
+      "generation_seed_used": 1729963674,
+      "generation_success": true,
+      "generation_time_seconds": 53.59443696800736,
+      "grid_size": {
+        "cols": 15,
+        "rows": 15
+      },
+      "instance_id": "hard_threshold_15x15",
+      "instance_path": "data/threshold/hard_threshold_15x15.json",
+      "is_structurally_valid": true,
+      "seed_attempt_count": 1,
+      "solve_message": "Solution found.",
+      "solve_status_label": "solved",
+      "solve_success": true,
+      "solve_time_seconds": 0.18345033001969568
+    },
+    {
+      "generation_message": "Puzzle generated successfully. Difficulty calibration note: Difficulty calibration mismatch: requested hard, measured hard, overlap=0.348, non_rectangular_regions=1, non_rectangular_irregularity=0.545.",
+      "generation_seed_used": 1729964058,
+      "generation_success": true,
+      "generation_time_seconds": 175.15411568502896,
+      "grid_size": {
+        "cols": 16,
+        "rows": 16
+      },
+      "instance_id": "hard_threshold_16x16",
+      "instance_path": "data/threshold/hard_threshold_16x16.json",
+      "is_structurally_valid": true,
+      "seed_attempt_count": 1,
+      "solve_message": "Solution found.",
+      "solve_status_label": "solved",
+      "solve_success": true,
+      "solve_time_seconds": 0.5395485890039708
+    }
+  ],
+  "base_seed": 1729960602,
+  "data_dir": "data/threshold",
+  "first_exceeding_grid_size": {
+    "cols": 16,
+    "rows": 16
+  },
+  "first_exceeding_solve_time": 0.5395485890039708,
+  "instance_paths": [
+    "data/threshold/hard_threshold_7x7.json",
+    "data/threshold/hard_threshold_8x8.json",
+    "data/threshold/hard_threshold_9x9.json",
+    "data/threshold/hard_threshold_10x10.json",
+    "data/threshold/hard_threshold_11x11.json",
+    "data/threshold/hard_threshold_12x12.json",
+    "data/threshold/hard_threshold_13x13.json",
+    "data/threshold/hard_threshold_14x14.json",
+    "data/threshold/hard_threshold_15x15.json",
+    "data/threshold/hard_threshold_16x16.json"
+  ],
+  "max_side": 31,
+  "max_solved_grid_size": {
+    "cols": 15,
+    "rows": 15
+  },
+  "max_solved_solve_time": 0.18345033001969568,
+  "message": "Hard-threshold search completed: the threshold is first exceeded at 16x16.",
+  "solver_backend": "exact_flow",
+  "start_side": 7,
+  "success": true,
+  "threshold_seconds": 0.5
+}

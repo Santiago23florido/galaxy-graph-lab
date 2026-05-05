@@ -10,6 +10,7 @@ from .core import (
     DATASET_SOLVE_BACKEND_BOTH,
     DEFAULT_CPLEX_RESULTS_DIR,
     DEFAULT_DATA_DIR,
+    DEFAULT_THRESHOLD_DATA_DIR,
     DEFAULT_FIXED_DATASET_END_SIDE,
     DEFAULT_FIXED_DATASET_START_SIDE,
     DEFAULT_DATASET_INSTANCES_PER_SIZE,
@@ -214,6 +215,12 @@ def _build_parser() -> argparse.ArgumentParser:
         help="Optional deterministic base seed for threshold search.",
     )
     threshold_parser.add_argument(
+        "--data-dir",
+        type=Path,
+        default=DEFAULT_THRESHOLD_DATA_DIR,
+        help="Directory where threshold-search instances and logs will be stored.",
+    )
+    threshold_parser.add_argument(
         "--seed-block-count",
         type=int,
         default=DEFAULT_INSTANCE_SEED_BLOCKS,
@@ -291,6 +298,7 @@ def main() -> None:
     if args.command == "find-hard-threshold":
         print("buscando limite hard...", flush=True)
         result = find_hard_threshold_limit(
+            data_dir=args.data_dir,
             threshold_seconds=args.threshold_seconds,
             solver_backend=args.solver_backend,
             start_side=args.start_side,
@@ -305,6 +313,9 @@ def main() -> None:
             raise SystemExit(result.message)
 
         print(result.message)
+        print(f"dataDir={result.data_dir}")
+        print(f"manifest={result.manifest_path}")
+        print(f"progressLog={result.progress_log_path}")
         print(f"thresholdSeconds={result.threshold_seconds:.6f}")
         print(f"solverBackend={result.solver_backend}")
         if result.max_solved_grid_size is not None:

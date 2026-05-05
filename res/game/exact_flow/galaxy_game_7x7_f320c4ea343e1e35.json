@@ -1,0 +1,232 @@
+{
+  "backend_name": "exact_flow",
+  "cells_by_center": {
+    "g0": [
+      {
+        "col": 1,
+        "row": 0
+      },
+      {
+        "col": 1,
+        "row": 1
+      }
+    ],
+    "g1": [
+      {
+        "col": 5,
+        "row": 0
+      },
+      {
+        "col": 6,
+        "row": 0
+      },
+      {
+        "col": 5,
+        "row": 1
+      },
+      {
+        "col": 6,
+        "row": 1
+      }
+    ],
+    "g2": [
+      {
+        "col": 3,
+        "row": 0
+      },
+      {
+        "col": 4,
+        "row": 0
+      },
+      {
+        "col": 3,
+        "row": 1
+      },
+      {
+        "col": 4,
+        "row": 1
+      },
+      {
+        "col": 3,
+        "row": 2
+      },
+      {
+        "col": 4,
+        "row": 2
+      },
+      {
+        "col": 3,
+        "row": 3
+      },
+      {
+        "col": 4,
+        "row": 3
+      }
+    ],
+    "g3": [
+      {
+        "col": 0,
+        "row": 0
+      },
+      {
+        "col": 2,
+        "row": 0
+      },
+      {
+        "col": 0,
+        "row": 1
+      },
+      {
+        "col": 2,
+        "row": 1
+      },
+      {
+        "col": 0,
+        "row": 2
+      },
+      {
+        "col": 1,
+        "row": 2
+      },
+      {
+        "col": 2,
+        "row": 2
+      },
+      {
+        "col": 0,
+        "row": 3
+      },
+      {
+        "col": 1,
+        "row": 3
+      },
+      {
+        "col": 2,
+        "row": 3
+      },
+      {
+        "col": 0,
+        "row": 4
+      },
+      {
+        "col": 2,
+        "row": 4
+      },
+      {
+        "col": 0,
+        "row": 5
+      },
+      {
+        "col": 2,
+        "row": 5
+      }
+    ],
+    "g4": [
+      {
+        "col": 5,
+        "row": 2
+      },
+      {
+        "col": 6,
+        "row": 2
+      },
+      {
+        "col": 5,
+        "row": 3
+      },
+      {
+        "col": 6,
+        "row": 3
+      }
+    ],
+    "g5": [
+      {
+        "col": 1,
+        "row": 4
+      },
+      {
+        "col": 1,
+        "row": 5
+      }
+    ],
+    "g6": [
+      {
+        "col": 3,
+        "row": 4
+      },
+      {
+        "col": 4,
+        "row": 4
+      },
+      {
+        "col": 5,
+        "row": 4
+      },
+      {
+        "col": 6,
+        "row": 4
+      },
+      {
+        "col": 3,
+        "row": 5
+      },
+      {
+        "col": 4,
+        "row": 5
+      },
+      {
+        "col": 5,
+        "row": 5
+      },
+      {
+        "col": 6,
+        "row": 5
+      }
+    ],
+    "g7": [
+      {
+        "col": 0,
+        "row": 6
+      },
+      {
+        "col": 1,
+        "row": 6
+      }
+    ],
+    "g8": [
+      {
+        "col": 2,
+        "row": 6
+      },
+      {
+        "col": 3,
+        "row": 6
+      },
+      {
+        "col": 4,
+        "row": 6
+      }
+    ],
+    "g9": [
+      {
+        "col": 5,
+        "row": 6
+      },
+      {
+        "col": 6,
+        "row": 6
+      }
+    ]
+  },
+  "instance_id": "galaxy_game_7x7_f320c4ea343e1e35",
+  "matched_preference_count": 6,
+  "message": "Solution found and it follows the requested shape guidance.",
+  "mip_gap": 0.0,
+  "mip_node_count": 1,
+  "mismatch_count": 0,
+  "objective_value": 18.0,
+  "preferred_assignment_count": 6,
+  "solution_mode": "guided_shape",
+  "status_code": 0,
+  "status_label": "solved"
+}

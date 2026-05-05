@@ -3,9 +3,21 @@ from __future__ import annotations
 from dataclasses import dataclass
 
 try:
-    from ..core import BoardSpec, CenterSpec, PuzzleData
+    from ..core import (
+        BoardSpec,
+        CenterSpec,
+        PuzzleData,
+        PuzzleSolveResult,
+        StoredPuzzleInstance,
+    )
 except ImportError:
-    from core import BoardSpec, CenterSpec, PuzzleData
+    from core import (
+        BoardSpec,
+        CenterSpec,
+        PuzzleData,
+        PuzzleSolveResult,
+        StoredPuzzleInstance,
+    )
 
 
 @dataclass(frozen=True, slots=True)
@@ -14,6 +26,8 @@ class FixedPuzzle:
 
     name: str
     puzzle_data: PuzzleData
+    stored_instance: StoredPuzzleInstance | None = None
+    cached_solution: PuzzleSolveResult | None = None
 
 
 def load_phase_a_puzzle() -> FixedPuzzle:

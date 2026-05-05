@@ -1,0 +1,237 @@
+{
+  "center_type_by_center": {
+    "g0": "vertex",
+    "g1": "vertex",
+    "g10": "edge",
+    "g11": "edge",
+    "g12": "cell",
+    "g13": "cell",
+    "g14": "edge",
+    "g15": "edge",
+    "g16": "edge",
+    "g17": "cell",
+    "g18": "vertex",
+    "g19": "edge",
+    "g2": "cell",
+    "g20": "cell",
+    "g21": "edge",
+    "g22": "vertex",
+    "g23": "edge",
+    "g24": "edge",
+    "g25": "edge",
+    "g26": "vertex",
+    "g27": "cell",
+    "g28": "edge",
+    "g29": "vertex",
+    "g3": "edge",
+    "g30": "vertex",
+    "g31": "edge",
+    "g32": "edge",
+    "g33": "edge",
+    "g4": "cell",
+    "g5": "vertex",
+    "g6": "vertex",
+    "g7": "cell",
+    "g8": "vertex",
+    "g9": "edge"
+  },
+  "centers": [
+    {
+      "col_coord2": 11,
+      "id": "g0",
+      "row_coord2": 1
+    },
+    {
+      "col_coord2": 15,
+      "id": "g1",
+      "row_coord2": 1
+    },
+    {
+      "col_coord2": 2,
+      "id": "g2",
+      "row_coord2": 2
+    },
+    {
+      "col_coord2": 7,
+      "id": "g3",
+      "row_coord2": 2
+    },
+    {
+      "col_coord2": 20,
+      "id": "g4",
+      "row_coord2": 2
+    },
+    {
+      "col_coord2": 27,
+      "id": "g5",
+      "row_coord2": 3
+    },
+    {
+      "col_coord2": 13,
+      "id": "g6",
+      "row_coord2": 7
+    },
+    {
+      "col_coord2": 20,
+      "id": "g7",
+      "row_coord2": 6
+    },
+    {
+      "col_coord2": 1,
+      "id": "g8",
+      "row_coord2": 7
+    },
+    {
+      "col_coord2": 6,
+      "id": "g9",
+      "row_coord2": 7
+    },
+    {
+      "col_coord2": 19,
+      "id": "g10",
+      "row_coord2": 8
+    },
+    {
+      "col_coord2": 23,
+      "id": "g11",
+      "row_coord2": 8
+    },
+    {
+      "col_coord2": 28,
+      "id": "g12",
+      "row_coord2": 8
+    },
+    {
+      "col_coord2": 2,
+      "id": "g13",
+      "row_coord2": 12
+    },
+    {
+      "col_coord2": 7,
+      "id": "g14",
+      "row_coord2": 12
+    },
+    {
+      "col_coord2": 19,
+      "id": "g15",
+      "row_coord2": 12
+    },
+    {
+      "col_coord2": 23,
+      "id": "g16",
+      "row_coord2": 12
+    },
+    {
+      "col_coord2": 28,
+      "id": "g17",
+      "row_coord2": 12
+    },
+    {
+      "col_coord2": 13,
+      "id": "g18",
+      "row_coord2": 15
+    },
+    {
+      "col_coord2": 20,
+      "id": "g19",
+      "row_coord2": 17
+    },
+    {
+      "col_coord2": 2,
+      "id": "g20",
+      "row_coord2": 18
+    },
+    {
+      "col_coord2": 7,
+      "id": "g21",
+      "row_coord2": 18
+    },
+    {
+      "col_coord2": 27,
+      "id": "g22",
+      "row_coord2": 19
+    },
+    {
+      "col_coord2": 10,
+      "id": "g23",
+      "row_coord2": 21
+    },
+    {
+      "col_coord2": 14,
+      "id": "g24",
+      "row_coord2": 21
+    },
+    {
+      "col_coord2": 20,
+      "id": "g25",
+      "row_coord2": 21
+    },
+    {
+      "col_coord2": 1,
+      "id": "g26",
+      "row_coord2": 23
+    },
+    {
+      "col_coord2": 6,
+      "id": "g27",
+      "row_coord2": 24
+    },
+    {
+      "col_coord2": 18,
+      "id": "g28",
+      "row_coord2": 25
+    },
+    {
+      "col_coord2": 25,
+      "id": "g29",
+      "row_coord2": 25
+    },
+    {
+      "col_coord2": 13,
+      "id": "g30",
+      "row_coord2": 27
+    },
+    {
+      "col_coord2": 1,
+      "id": "g31",
+      "row_coord2": 28
+    },
+    {
+      "col_coord2": 6,
+      "id": "g32",
+      "row_coord2": 29
+    },
+    {
+      "col_coord2": 24,
+      "id": "g33",
+      "row_coord2": 29
+    }
+  ],
+  "difficulty_calibration": {
+    "average_domain_overlap": 0.3476538493478906,
+    "average_non_rectangular_irregularity": 0.5454545454545454,
+    "average_region_irregularity": 0.0160427807486631,
+    "board_size_score": 0.5,
+    "center_count_score": 1.0,
+    "center_type_score": 0.6235294117647059,
+    "domain_overlap_score": 0.3476538493478906,
+    "irregularity_within_target": false,
+    "max_region_irregularity": 0.5454545454545454,
+    "measured_difficulty": "hard",
+    "measured_score": 0.6344947633865344,
+    "message": "Difficulty calibration mismatch: requested hard, measured hard, overlap=0.348, non_rectangular_regions=1, non_rectangular_irregularity=0.545.",
+    "non_rectangular_region_count": 1,
+    "overlap_within_target": true,
+    "profile_match": false,
+    "requested_difficulty": "hard",
+    "solver_effort_score": 0.07640803631409603
+  },
+  "generation_retry_count": 4,
+  "generation_seed": 1729964058,
+  "grid_size": {
+    "cols": 16,
+    "rows": 16
+  },
+  "instance_id": "hard_threshold_16x16",
+  "requested_difficulty": "hard"
+}

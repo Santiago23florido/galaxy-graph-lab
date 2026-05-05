@@ -46,6 +46,7 @@ from .validators import validate_assignment
 
 
 DEFAULT_DATA_DIR = Path("data")
+DEFAULT_THRESHOLD_DATA_DIR = DEFAULT_DATA_DIR / "threshold"
 DEFAULT_CPLEX_RESULTS_DIR = Path("res") / "cplex"
 DEFAULT_GENERATION_RETRIES = 64
 DEFAULT_GENERATION_SEED_SWEEP = 24
@@ -145,6 +146,10 @@ def _instance_file_name(
 
 def _result_file_name(instance_id: str) -> str:
     return f"{instance_id}.txt"
+
+
+def _threshold_instance_file_name(board: BoardSpec) -> str:
+    return f"hard_threshold_{_grid_label(board)}.json"
 
 
 def _backend_results_dir(results_dir: Path, solver_backend: str) -> Path:
@@ -754,6 +759,10 @@ class HardThresholdSearchResult:
 
     success: bool
     message: str
+    data_dir: Path
+    manifest_path: Path | None
+    progress_log_path: Path | None
+    instance_paths: tuple[Path, ...]
     threshold_seconds: float
     solver_backend: str
     start_side: int
@@ -929,6 +938,26 @@ def save_instance(instance: StoredPuzzleInstance, path: str | Path) -> Path:
     return output_path
 
 
+def _write_threshold_search_artifacts(
+    *,
+    data_dir: Path,
+    progress_messages: list[str],
+    manifest_payload: Mapping[str, object],
+) -> tuple[Path, Path]:
+    data_dir.mkdir(parents=True, exist_ok=True)
+    progress_log_path = data_dir / "progress.log"
+    progress_log_path.write_text(
+        "\n".join(progress_messages) + ("\n" if progress_messages else ""),
+        encoding="utf-8",
+    )
+    manifest_path = data_dir / "manifest.json"
+    manifest_path.write_text(
+        json.dumps(_json_ready(manifest_payload), indent=2, sort_keys=True) + "\n",
+        encoding="utf-8",
+    )
+    return manifest_path, progress_log_path
+
+
 def load_instance(path: str | Path) -> StoredPuzzleInstance:
     """Load one stored puzzle instance from JSON."""
 
@@ -952,6 +981,7 @@ def load_instance(path: str | Path) -> StoredPuzzleInstance:
 
 def find_hard_threshold_limit(
     *,
+    data_dir: str | Path = DEFAULT_THRESHOLD_DATA_DIR,
     threshold_seconds: float = DEFAULT_DATASET_SELECTION_MIN_SOLVE_TIME_SECONDS,
     solver_backend: str = DEFAULT_DATASET_SELECTION_SOLVER_BACKEND,
     start_side: int = DEFAULT_FIXED_DATASET_START_SIDE,
@@ -973,19 +1003,82 @@ def find_hard_threshold_limit(
     if max_side < start_side:
         raise ValueError("max_side must be at least start_side.")
 
+    output_dir = Path(data_dir)
+    output_dir.mkdir(parents=True, exist_ok=True)
+    _clear_matching_files(output_dir, "hard_threshold_*.json")
+    for artifact_path in (output_dir / "manifest.json", output_dir / "progress.log"):
+        if artifact_path.exists():
+            artifact_path.unlink()
+
     if base_seed is None:
         base_seed = secrets.randbelow(2**31)
 
     seed_cursor = base_seed
     max_solved_grid_size: BoardSpec | None = None
     max_solved_solve_time: float | None = None
+    progress_messages: list[str] = []
+    attempt_records: list[dict[str, object]] = []
+    stored_instance_paths: list[Path] = []
+
+    def _emit_progress(message: str) -> None:
+        progress_messages.append(message)
+        if progress_callback is not None:
+            progress_callback(message)
+
+    def _finalize_result(
+        *,
+        success: bool,
+        message: str,
+        first_exceeding_grid_size: BoardSpec | None,
+        first_exceeding_solve_time: float | None,
+    ) -> HardThresholdSearchResult:
+        manifest_payload = {
+            "success": success,
+            "message": message,
+            "data_dir": str(output_dir),
+            "threshold_seconds": threshold_seconds,
+            "solver_backend": solver_backend,
+            "start_side": start_side,
+            "max_side": max_side,
+            "base_seed": base_seed,
+            "max_solved_grid_size": (
+                asdict(max_solved_grid_size) if max_solved_grid_size is not None else None
+            ),
+            "max_solved_solve_time": max_solved_solve_time,
+            "first_exceeding_grid_size": (
+                asdict(first_exceeding_grid_size)
+                if first_exceeding_grid_size is not None
+                else None
+            ),
+            "first_exceeding_solve_time": first_exceeding_solve_time,
+            "instance_paths": [str(path) for path in stored_instance_paths],
+            "attempts": attempt_records,
+        }
+        manifest_path, progress_log_path = _write_threshold_search_artifacts(
+            data_dir=output_dir,
+            progress_messages=progress_messages,
+            manifest_payload=manifest_payload,
+        )
+        return HardThresholdSearchResult(
+            success=success,
+            message=message,
+            data_dir=output_dir,
+            manifest_path=manifest_path,
+            progress_log_path=progress_log_path,
+            instance_paths=tuple(stored_instance_paths),
+            threshold_seconds=threshold_seconds,
+            solver_backend=solver_backend,
+            start_side=start_side,
+            max_side=max_side,
+            max_solved_grid_size=max_solved_grid_size,
+            max_solved_solve_time=max_solved_solve_time,
+            first_exceeding_grid_size=first_exceeding_grid_size,
+            first_exceeding_solve_time=first_exceeding_solve_time,
+        )
 
     for side in range(start_side, max_side + 1):
         grid_size = _square_board(side)
-        if progress_callback is not None:
-            progress_callback(
-                f"Searching hard threshold dimension {_grid_label(grid_size)}..."
-            )
+        _emit_progress(f"Searching hard threshold dimension {_grid_label(grid_size)}...")
 
         dataset_profile = _dataset_generation_profile(
             GENERATION_DIFFICULTY_HARD,
@@ -1000,10 +1093,9 @@ def find_hard_threshold_limit(
         )
 
         def _generation_progress(message: str) -> None:
-            if progress_callback is not None:
-                progress_callback(
-                    f"Searching hard threshold dimension {_grid_label(grid_size)}: {message}"
-                )
+            _emit_progress(
+                f"Searching hard threshold dimension {_grid_label(grid_size)}: {message}"
+            )
 
         generation_started_at = time.perf_counter()
         generation_result = generate_instance(
@@ -1019,85 +1111,95 @@ def find_hard_threshold_limit(
         seed_cursor += seed_sweep * seed_block_count
 
         if not generation_result.success or generation_result.instance is None:
-            return HardThresholdSearchResult(
+            attempt_records.append(
+                {
+                    "grid_size": asdict(grid_size),
+                    "instance_id": f"hard_threshold_{_grid_label(grid_size)}",
+                    "generation_success": False,
+                    "generation_time_seconds": generation_time,
+                    "generation_message": generation_result.message,
+                    "generation_seed_used": generation_result.generation_seed_used,
+                    "seed_attempt_count": generation_result.seed_attempt_count,
+                }
+            )
+            return _finalize_result(
                 success=False,
                 message=(
                     "Could not generate a valid hard instance at "
                     f"{_grid_label(grid_size)}."
                 ),
-                threshold_seconds=threshold_seconds,
-                solver_backend=solver_backend,
-                start_side=start_side,
-                max_side=max_side,
-                max_solved_grid_size=max_solved_grid_size,
-                max_solved_solve_time=max_solved_solve_time,
                 first_exceeding_grid_size=None,
                 first_exceeding_solve_time=None,
             )
+
+        instance_path = save_instance(
+            generation_result.instance,
+            output_dir / _threshold_instance_file_name(grid_size),
+        )
+        stored_instance_paths.append(instance_path)
 
         solve_result, solve_time = _benchmark_generated_puzzle(
             generation_result.instance.puzzle_data,
             solver_backend=solver_backend,
         )
-        if progress_callback is not None:
-            progress_callback(
-                "Searching hard threshold dimension "
-                f"{_grid_label(grid_size)}: generación {generation_time:.2f}s, "
-                f"solver {solve_time:.2f}s"
-            )
-        if (
-            not solve_result.success
-            or solve_result.assignment is None
-            or not validate_assignment(
+        _emit_progress(
+            "Searching hard threshold dimension "
+            f"{_grid_label(grid_size)}: generación {generation_time:.2f}s, "
+            f"solver {solve_time:.2f}s"
+        )
+        structurally_valid = (
+            solve_result.success
+            and solve_result.assignment is not None
+            and validate_assignment(
                 generation_result.instance.puzzle_data,
                 solve_result.assignment.cells_by_center,
             ).is_valid
-        ):
+        )
+        attempt_records.append(
+            {
+                "grid_size": asdict(grid_size),
+                "instance_id": generation_result.instance.instance_id,
+                "instance_path": str(instance_path),
+                "generation_success": True,
+                "generation_time_seconds": generation_time,
+                "generation_message": generation_result.message,
+                "generation_seed_used": generation_result.generation_seed_used,
+                "seed_attempt_count": generation_result.seed_attempt_count,
+                "solve_time_seconds": solve_time,
+                "solve_success": solve_result.success,
+                "solve_status_label": solve_result.status_label,
+                "solve_message": solve_result.message,
+                "is_structurally_valid": structurally_valid,
+            }
+        )
+        if not structurally_valid:
             if solve_time >= threshold_seconds:
-                return HardThresholdSearchResult(
+                return _finalize_result(
                     success=True,
                     message=(
                         "Hard-threshold search completed: the threshold is first exceeded at "
                         f"{_grid_label(grid_size)}."
                     ),
-                    threshold_seconds=threshold_seconds,
-                    solver_backend=solver_backend,
-                    start_side=start_side,
-                    max_side=max_side,
-                    max_solved_grid_size=max_solved_grid_size,
-                    max_solved_solve_time=max_solved_solve_time,
                     first_exceeding_grid_size=grid_size,
                     first_exceeding_solve_time=solve_time,
                 )
-            return HardThresholdSearchResult(
+            return _finalize_result(
                 success=False,
                 message=(
                     "The solver could not validate a structurally correct hard "
                     f"instance at {_grid_label(grid_size)}."
                 ),
-                threshold_seconds=threshold_seconds,
-                solver_backend=solver_backend,
-                start_side=start_side,
-                max_side=max_side,
-                max_solved_grid_size=max_solved_grid_size,
-                max_solved_solve_time=max_solved_solve_time,
                 first_exceeding_grid_size=None,
                 first_exceeding_solve_time=None,
             )
 
         if solve_time > threshold_seconds:
-            return HardThresholdSearchResult(
+            return _finalize_result(
                 success=True,
                 message=(
                     "Hard-threshold search completed: the threshold is first exceeded at "
                     f"{_grid_label(grid_size)}."
                 ),
-                threshold_seconds=threshold_seconds,
-                solver_backend=solver_backend,
-                start_side=start_side,
-                max_side=max_side,
-                max_solved_grid_size=max_solved_grid_size,
-                max_solved_solve_time=max_solved_solve_time,
                 first_exceeding_grid_size=grid_size,
                 first_exceeding_solve_time=solve_time,
             )
@@ -1105,18 +1207,12 @@ def find_hard_threshold_limit(
         max_solved_grid_size = grid_size
         max_solved_solve_time = solve_time
 
-    return HardThresholdSearchResult(
+    return _finalize_result(
         success=True,
         message=(
             "Hard-threshold search completed without exceeding the threshold "
             f"up to {_grid_label(_square_board(max_side))}."
         ),
-        threshold_seconds=threshold_seconds,
-        solver_backend=solver_backend,
-        start_side=start_side,
-        max_side=max_side,
-        max_solved_grid_size=max_solved_grid_size,
-        max_solved_solve_time=max_solved_solve_time,
         first_exceeding_grid_size=None,
         first_exceeding_solve_time=None,
     )
@@ -1811,6 +1907,7 @@ def solve_dataset(
 __all__ = [
     "DEFAULT_CPLEX_RESULTS_DIR",
     "DEFAULT_DATA_DIR",
+    "DEFAULT_THRESHOLD_DATA_DIR",
     "DEFAULT_DATASET_INSTANCES_PER_SIZE",
     "DEFAULT_DATASET_INSTANCE_MIN_SOLVE_TIME_SECONDS",
     "DEFAULT_FIXED_DATASET_END_SIDE",

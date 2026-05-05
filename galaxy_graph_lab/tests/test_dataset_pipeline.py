@@ -23,6 +23,7 @@ from galaxy_graph_lab.core import (
     PuzzleGenerationRequest,
     PuzzleSolveResult,
     StoredPuzzleInstance,
+    find_hard_threshold_limit,
     generate_dataset,
     generate_instance,
     load_instance,
@@ -307,6 +308,59 @@ class DataSetPipelineTests(unittest.TestCase):
             ),
         )
         self.assertEqual(len(generation_result.instance_paths), 15)
+
+    def test_find_hard_threshold_persists_instances_and_logs(self) -> None:
+        board = BoardSpec(rows=7, cols=7)
+        stored_instance = self._stored_instance_for_board(
+            GENERATION_DIFFICULTY_HARD,
+            board,
+        )
+        generation_result = mock.Mock(
+            success=True,
+            message="ok",
+            instance=stored_instance,
+            generation_seed_used=123,
+            seed_attempt_count=1,
+        )
+        solve_result = PuzzleSolveResult(
+            success=True,
+            backend_name=EXACT_FLOW_SOLVER_BACKEND,
+            status_code=1,
+            status_label="solved",
+            message="ok",
+            assignment=self._single_cell_assignment(),
+            objective_value=0.0,
+            mip_gap=0.0,
+            mip_node_count=0,
+        )
+
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            with mock.patch.object(
+                dataset_module,
+                "generate_instance",
+                return_value=generation_result,
+            ):
+                with mock.patch.object(
+                    dataset_module,
+                    "_benchmark_generated_puzzle",
+                    return_value=(solve_result, 0.75),
+                ):
+                    result = find_hard_threshold_limit(
+                        data_dir=temporary_directory,
+                        threshold_seconds=0.5,
+                        start_side=7,
+                        max_side=7,
+                        base_seed=0,
+                    )
+
+            self.assertTrue(result.success)
+            self.assertEqual(result.data_dir, Path(temporary_directory))
+            self.assertIsNotNone(result.manifest_path)
+            self.assertIsNotNone(result.progress_log_path)
+            self.assertEqual(len(result.instance_paths), 1)
+            self.assertTrue(result.instance_paths[0].exists())
+            self.assertTrue(result.manifest_path.exists())
+            self.assertTrue(result.progress_log_path.exists())
 
     def test_seed_attempts_expand_into_a_unique_dispersed_budget(self) -> None:
         seeds = dataset_module._seed_attempts(

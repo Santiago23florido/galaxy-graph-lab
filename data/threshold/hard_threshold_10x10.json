@@ -1,0 +1,99 @@
+{
+  "center_type_by_center": {
+    "g0": "cell",
+    "g1": "edge",
+    "g10": "edge",
+    "g2": "cell",
+    "g3": "vertex",
+    "g4": "vertex",
+    "g5": "vertex",
+    "g6": "vertex",
+    "g7": "edge",
+    "g8": "edge",
+    "g9": "edge"
+  },
+  "centers": [
+    {
+      "col_coord2": 2,
+      "id": "g0",
+      "row_coord2": 2
+    },
+    {
+      "col_coord2": 9,
+      "id": "g1",
+      "row_coord2": 2
+    },
+    {
+      "col_coord2": 16,
+      "id": "g2",
+      "row_coord2": 2
+    },
+    {
+      "col_coord2": 9,
+      "id": "g3",
+      "row_coord2": 7
+    },
+    {
+      "col_coord2": 3,
+      "id": "g4",
+      "row_coord2": 9
+    },
+    {
+      "col_coord2": 15,
+      "id": "g5",
+      "row_coord2": 9
+    },
+    {
+      "col_coord2": 9,
+      "id": "g6",
+      "row_coord2": 11
+    },
+    {
+      "col_coord2": 3,
+      "id": "g7",
+      "row_coord2": 16
+    },
+    {
+      "col_coord2": 9,
+      "id": "g8",
+      "row_coord2": 16
+    },
+    {
+      "col_coord2": 13,
+      "id": "g9",
+      "row_coord2": 16
+    },
+    {
+      "col_coord2": 17,
+      "id": "g10",
+      "row_coord2": 16
+    }
+  ],
+  "difficulty_calibration": {
+    "average_domain_overlap": 0.46454545454545454,
+    "average_non_rectangular_irregularity": 0.16666666666666669,
+    "average_region_irregularity": 0.030303030303030307,
+    "board_size_score": 0.5,
+    "center_count_score": 0.9,
+    "center_type_score": 0.6727272727272727,
+    "domain_overlap_score": 0.46454545454545454,
+    "irregularity_within_target": true,
+    "max_region_irregularity": 0.2666666666666667,
+    "measured_difficulty": "hard",
+    "measured_score": 0.629123756738053,
+    "message": "Difficulty calibration matched the requested profile.",
+    "non_rectangular_region_count": 2,
+    "overlap_within_target": true,
+    "profile_match": true,
+    "requested_difficulty": "hard",
+    "solver_effort_score": 0.09896484010780268
+  },
+  "generation_retry_count": 0,
+  "generation_seed": 1729961754,
+  "grid_size": {
+    "cols": 10,
+    "rows": 10
+  },
+  "instance_id": "hard_threshold_10x10",
+  "requested_difficulty": "hard"
+}

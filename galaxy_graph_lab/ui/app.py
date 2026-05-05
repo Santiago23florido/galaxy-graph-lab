@@ -6,6 +6,7 @@ from types import MappingProxyType
 import pygame
 
 from ..core import DEFAULT_SOLVER_BACKEND, generate_puzzle, validate_assignment
+from .game_cache import prepare_generated_puzzle_cache
 from .debug_tools import (
     DebugOverlayState,
     comparison_by_cell,
@@ -88,10 +89,17 @@ def request_solution_for_current_board(
     """Request one solver solution guided by the current player assignment."""
 
     previous_assignment = dict(game_state.assigned_center_by_cell)
-    result = solver_session.request_solution(
-        puzzle_data,
-        preferred_assignment_by_cell=previous_assignment,
-    )
+    if (
+        solver_session.solver_result is not None
+        and solver_session.solver_result.success
+        and solver_session.solver_result.assignment is not None
+    ):
+        result = solver_session.solver_result
+    else:
+        result = solver_session.request_solution(
+            puzzle_data,
+            preferred_assignment_by_cell=previous_assignment,
+        )
     if not result.success or result.assignment is None:
         return False
 
@@ -119,6 +127,7 @@ def restore_manual_board_state(
 def build_generated_ui_puzzle(
     start_screen_state: StartScreenState,
     *,
+    solver_backend: str = DEFAULT_SOLVER_BACKEND,
     base_seed: int | None = None,
 ) -> tuple[FixedPuzzle | None, str]:
     """Generate one UI puzzle from the current start-screen selection."""
@@ -136,10 +145,17 @@ def build_generated_ui_puzzle(
         if not generation_result.success or generation_result.puzzle is None:
             continue
 
+        stored_instance, cached_solution = prepare_generated_puzzle_cache(
+            generation_result,
+            solver_backend=solver_backend,
+        )
+
         return (
             FixedPuzzle(
                 name=generation_result.puzzle.name,
                 puzzle_data=generation_result.puzzle.puzzle_data,
+                stored_instance=stored_instance,
+                cached_solution=cached_solution,
             ),
             generation_result.message,
         )
@@ -263,6 +279,8 @@ def run_phase_f_app(
             )
             debug_state = DebugOverlayState()
             solver_session = SolverSessionState(solver_backend=solver_backend)
+            if puzzle.cached_solution is not None:
+                solver_session.prime_cached_result(puzzle.cached_solution)
             validation_result = validate_assignment(
                 puzzle.puzzle_data,
                 game_state.candidate_assignment(),
@@ -399,7 +417,10 @@ def run_phase_f_app(
                             event.pos,
                         )
                         if clicked_hit is not None and clicked_hit.kind == "generate":
-                            next_puzzle, message = build_generated_ui_puzzle(start_screen_state)
+                            next_puzzle, message = build_generated_ui_puzzle(
+                                start_screen_state,
+                                solver_backend=solver_backend,
+                            )
                             start_screen_state.status_message = message
                             if next_puzzle is not None:
                                 load_board_scene(next_puzzle)
