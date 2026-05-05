@@ -138,6 +138,12 @@ class CliEntrypointTests(unittest.TestCase):
         threshold_result = SimpleNamespace(
             success=True,
             message="Hard-threshold search completed.",
+            data_dir=Path("/tmp/threshold"),
+            manifest_path=Path("/tmp/threshold/manifest.json"),
+            progress_log_path=Path("/tmp/threshold/progress.log"),
+            instance_paths=(
+                Path("/tmp/threshold/hard_threshold_7x7.json"),
+            ),
             threshold_seconds=0.5,
             solver_backend=EXACT_FLOW_SOLVER_BACKEND,
             max_solved_grid_size=BoardSpec(rows=13, cols=13),
@@ -168,6 +174,7 @@ class CliEntrypointTests(unittest.TestCase):
                     dataset_cli_main()
 
         search_mock.assert_called_once_with(
+            data_dir=unittest.mock.ANY,
             threshold_seconds=0.5,
             solver_backend=EXACT_FLOW_SOLVER_BACKEND,
             start_side=7,

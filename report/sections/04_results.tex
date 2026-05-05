@@ -50,3 +50,88 @@ The size-aware scaling rule used to derive the center-count interval from the
 board area is described in the dataset-construction subsection of the
 methodology. Table~\ref{tab:dataset_generation_parameters} summarizes the
 numerical parameters that were used in the experimental campaign.
+
+In the context of the obtained results, it is important to emphasize that, due to the way in which the instance generator is defined, all instances included in the test database necessarily have an exact solution that can be reached by the flow-based MILP solver within the maximum prescribed time limit of \(0.5\) seconds. This explains why all instances used in the experiments were solved exactly by this model.
+
+However, the main interest lies in evaluating, over this same set of instances with certified exact solutions, the performance of two alternative solving approaches: the solver that uses a callback mechanism to enforce the connectivity constraint, and the heuristic solver. For this purpose, each method is assigned a maximum search time before declaring the instance unsolved: \(10\) seconds for the callback-based solver and \(100\) seconds for the heuristic model.
+
+
+
+\begin{figure}[t]
+\centering
+\includegraphics[width=\columnwidth]{sections/images/backend_difficulty_overview.png}
+\caption{Comparison of the three solver backends aggregated by difficulty.}
+\label{fig:backend_difficulty_overview}
+\end{figure}
+
+The performance of the generator is first evaluated in terms of difficulty selection. Fig.~\ref{fig:backend_difficulty_overview} shows that the observed behavior is consistent with the expected theoretical trend. For the three implemented solvers, the average time required to solve the instances increases as the difficulty level increases.
+
+Since the same number of exactly solvable instances is used across all board dimensions, this result suggests that both the number of centers and the restrictions imposed on the base geometry of the system fulfill their design objective. In particular, these factors can be associated with an increase in the difficulty of finding a valid solution for a given instance.
+
+This interpretation is further supported by the fact that the number of instances solved within the assigned time limits decreases as the difficulty level increases. Such behavior is consistent with the expected dynamics of the difficulty-calibration process.
+
+
+
+\begin{figure}[t]
+\centering
+\includegraphics[width=\columnwidth]{sections/images/solver_time_by_difficulty_and_size.png}
+\caption{Average solution time as a function of board size for each solver.}
+\label{fig:solver_time_by_difficulty_and_size}
+\end{figure}
+
+
+
+\begin{figure}[t]
+\centering
+\includegraphics[width=\columnwidth]{sections/images/difficulty_time_by_solver_and_size.png}
+\caption{Average solution time as a function of board size for each difficulty.}
+\label{fig:difficulty_time_by_solver_and_size}
+\end{figure}
+
+Fig.~\ref{fig:backend_difficulty_overview} also reveals an analytically relevant dynamic regarding the relationship between convergence speed and difficulty, particularly when comparing the callback-based solver with the exact flow-based solver. The callback-based solver exhibits a lower average solution time for easier instances. However, as instance difficulty increases, the exact solver is not only less affected by the increase in difficulty, but also achieves considerably faster convergence than the other two solvers.
+
+This behavior can be explained by the methodological difference between the callback-based solver and the exact flow-based solver. As described in the methodology section, both approaches start from the same base constraint system, which captures all restrictive interactions of the puzzle except connectivity. In easy instances, two factors favor the callback-based approach. First, the cost of adding the flow variables required by the exact mathematical formulation of connectivity is significant when compared with the cost of solving the base system. Second, this additional cost is also significant when compared with the cost of iterating over base solutions until a connected solution is found.
+
+This interpretation is reinforced by the results shown in Fig.~\ref{fig:solver_time_by_difficulty_and_size}, where larger and more complex instances tend to favor the exact flow-based formulation, whereas smaller and less complex instances tend to favor the callback-based solver. In these simpler cases, the structural complexity of the instance is not sufficient to compensate for the additional computational cost introduced by solving the enlarged matrix equality system associated with the exact connectivity formulation.
+
+
+It is also relevant to analyze the behavior of the solving systems with respect to the board dimension for each instance. In this case, the expected trend is observed: the average solution time increases as the board dimension becomes larger.
+
+It is important to note that the technical separation associated with the easy difficulty level is clearer than the separation between medium and hard instances for each solver. Indeed, for some specific board dimensions, an overlap between the curves in Fig.~\ref{fig:difficulty_time_by_solver_and_size} can be observed. Nevertheless, the relationship between the mean convergence times preserves the expected ordering across all solvers, with higher-difficulty instances generally requiring longer solution times.
+
+
+
+\begin{figure}[t]
+\centering
+\includegraphics[width=\columnwidth]{sections/images/cumulative_solved_vs_time_7x7_panels.png}
+\caption{Cumulative number of solved instances as a function of time for
+\(7\times 7\) boards.}
+\label{fig:cumulative_solved_vs_time_7x7}
+\end{figure}
+
+\begin{figure}[t]
+\centering
+\includegraphics[width=\columnwidth]{sections/images/cumulative_solved_vs_time_11x11_panels.png}
+\caption{Cumulative number of solved instances as a function of time for
+\(11\times 11\) boards.}
+\label{fig:cumulative_solved_vs_time_11x11}
+\end{figure}
+
+Figs.~\ref{fig:cumulative_solved_vs_time_7x7}--\ref{fig:cumulative_solved_vs_time_11x11} provide clear examples of the number of instances solved at each time instant for all solvers. The dynamics shown in these plots are consistent with the conclusions established above: the exact flow-based solver responds faster for instances with more complex structures, whereas it may be slower than the callback-based solver for simpler configurations.
+
+In addition, these figures also show a reduction in the number of solutions found for more complex configurations when using solvers that involve heuristic components and are therefore not exact. They also reveal an increase in the average time required to reach a stable solved-state plateau as the difficulty level increases in most cases.
+
+However, some particular dynamics may appear depending on the solver, usually due to geometric effects or overlaps between parameterization intervals in the generalized difficulty model. These effects can cause the observed curves to partially overlap, even when the overall trend remains consistent with the expected relationship between instance complexity, convergence time, and solver performance.
+
+
+\begin{figure}[t]
+\centering
+\includegraphics[width=\columnwidth]{sections/images/hard_threshold_generation_vs_solver.png}
+\caption{Generation time and exact-flow solve time during the empirical
+\texttt{hard} threshold search.}
+\label{fig:hard_threshold_generation_vs_solver}
+\end{figure}
+
+The last aspect to be discussed in the implementation results concerns the maximum board size for which reachable solutions persist under the exact MILP formulation within the established time threshold. Since the objective is to identify a practical solvability threshold, the analysis focuses on determining the board size at which hard instances reach this limit.
+
+As shown in Fig.~\ref{fig:hard_threshold_generation_vs_solver}, the largest board size that remains consistently solvable for hard instances under the exact MILP configuration is \(15 \times 15\). Nevertheless, for \(16 \times 16\) boards, some generated instances can still be solved within the prescribed time threshold. However, in practice, no hard \(17 \times 17\) instance was found to be solvable within the time limit. Therefore, within the context of the puzzle game, \(17 \times 17\) hard instances are considered to exceed the valid solvability range established for the exact MILP solver.

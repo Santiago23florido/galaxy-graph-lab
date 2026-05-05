@@ -155,7 +155,15 @@ Among the orbits that survive this filtering stage, the algorithm assigns a scor
 
 The generated result is not treated as a final solution. Instead, the existence of a valid solution for the generated instance is verified in the same way as for any puzzle instance solved by the game engine. After this certification step, a difficulty-validation stage is applied in order to confirm that the instance satisfies the requirements associated with the prescribed difficulty level. The system implements an abstract difficulty label that is associated with several generation and validation criteria. These criteria include how many centers the puzzle should contain, what proportion of centers should lie inside cells, on edges, or on vertices, how much overlap is allowed between admissible domains, how much geometric irregularity is desired, how many non-rectangular regions must appear at minimum, and whether uniqueness or greater structural difficulty should be enforced. The calibration logic extracts a multi-factor description of the instance. It measures the board size, the number of centers, the center-type composition, the overlap between admissible domains, the geometric irregularity of the certified regions, and the computational effort required by the solver. The function \texttt{region\_irregularity()} is central in this process because it measures how far a region is from saturating its bounding box, making it a practical proxy for distinguishing regular rectangular galaxies from more intricate ones.
 
-The function \texttt{\_solver\_effort\_score()} incorporates backend metadata, such as node count and whether guided solving was used. Consequently, computational effort also becomes part of the operational notion of difficulty. The resulting score is compared against the expectations of the active difficulty profile and is then mapped back to a difficulty label. This turns calibration into a feedback loop between the intended generation policy and the observed certified behavior. Without this step, difficulty labels would only describe what the generator attempted to create, rather than what the final certified instance actually exhibits.
+The function \texttt{\_solver\_effort\_score()} incorporates backend metadata, such as node count and whether guided solving was used. Consequently, computational effort also becomes part of the operational notion of difficulty. The resulting score is compared against the expectations of the active difficulty profile and is then mapped back to a difficulty label, as shown in Fig.~\ref{fig:difficulty_selection}. This turns calibration into a feedback loop between the intended generation policy and the observed certified behavior. Without this step, difficulty labels would only describe what the generator attempted to create, rather than what the final certified instance actually exhibits.
+
+\begin{figure}[t]
+\centering
+\includegraphics[width=0.78\columnwidth]{sections/images/Difficulty selection.png}
+\caption{Difficulty-selection logic used to map calibrated instance features
+back to one of the discrete difficulty labels.}
+\label{fig:difficulty_selection}
+\end{figure}
 
 \subsection{Dataset and persistence layer}
 An instance representation and architecture are provided to support subsequent
@@ -241,3 +249,26 @@ Within the set of candidate orbits, the solver randomly selects one among the fi
 Once all board cells have been covered, a local improvement stage is applied through \texttt{\_local\_improvement()}. This procedure first identifies cells that are poorly aligned with \texttt{preferred\_assignment\_by\_cell}. If no such cells are found, it then examines cells that still coincide with \texttt{avoid\_assignment\_by\_cell}. For each candidate cell, the procedure attempts to move the corresponding orbit to another feasible center, revalidates the complete structure using \texttt{validate\_assignment()}, and accepts the move only if it improves the guide-based objective.
 
 In this way, the heuristic allows specific reassignment operations between regions, but only when the resulting assignment remains structurally valid. A final validation layer is then applied to verify that the solution produced by the heuristic model satisfies all required constraints.
+
+Once a valid assignment has been produced by any backend, the same normalized
+solution object can be rendered by the interactive Pygame layer, allowing the
+user to visualize both the puzzle instance and the computed region ownership in
+the game interface, as shown in Fig.~\ref{fig:game_solution}.
+
+\begin{figure}[t]
+\centering
+\includegraphics[width=0.82\columnwidth]{sections/images/Game Solution.png}
+\caption{Solved puzzle rendered in the interactive game interface.}
+\label{fig:game_solution}
+\end{figure}
+
+The same interactive layer also exposes the validation state of the current
+board configuration while the user edits a candidate solution, as shown in
+Fig.~\ref{fig:live_validation}.
+
+\begin{figure}[t]
+\centering
+\includegraphics[width=0.82\columnwidth]{sections/images/Live validation.png}
+\caption{Live structural-validation feedback in the interactive game interface.}
+\label{fig:live_validation}
+\end{figure}

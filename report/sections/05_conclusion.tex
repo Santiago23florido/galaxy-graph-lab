@@ -1,5 +1,11 @@
 \section{Conclusion}
 
-The report now uses an IEEE structure that is ready for iterative expansion.
-Future revisions should replace the placeholders with the final formulation,
-implementation details, and quantitative evaluation of the project.
+The implementation of \textit{Galaxy} demonstrates the feasibility of constructing a system for partitioning a discrete space from different methodological perspectives: from a mathematical formulation with relaxed constraints and callbacks, from an exact formulation based on flow constraints, or from a heuristic algorithm. In all cases, admissibility, kernel containment, rotational symmetry, and connectivity are encoded as the defining structural rules of a valid solution.
+
+This framework is relevant not only for the development of the puzzle game itself, but also for other fields of knowledge, particularly in image segmentation tasks such as the separation of touching cell nuclei in histopathological or microscopy images.
+
+At the implementation level, the project shows that the same compiled instance representation can support several complementary solving strategies. The callback-based backend demonstrates that connectivity can be enforced by iteratively rejecting disconnected base solutions. In addition, the orbit-based heuristic confirms that the geometric structure of the puzzle can be exploited to construct valid solutions without relying exclusively on exact optimization.
+
+The results also show that the three implemented solving strategies correspond to different computational profiles. The callback-based method can be competitive on simpler instances because it avoids the fixed overhead introduced by the flow formulation. In contrast, the exact flow-based model becomes more stable as the structural difficulty of the instances increases. The heuristic solver, although not complete in the same sense as the exact formulation, still provides a practical alternative for interactive solving and comparative evaluation.
+
+Overall, the project establishes a reusable framework for studying symmetry-constrained partition puzzles through graph theory, mixed-integer optimization, heuristic construction, and empirical benchmarking. Future work may extend this framework by improving the quality of the heuristic search, studying stronger connectivity cuts for the callback-based model, refining the difficulty-calibration pipeline, and expanding the experimental dataset toward larger instances and richer statistical analyses.

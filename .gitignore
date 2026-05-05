@@ -31,3 +31,4 @@ galaxy_graph_lab/CALLBACK_PARALLEL_SOLVER_PHASES.md
 galaxy_graph_lab/PYGAME_MVP_PHASES.md
 galaxy_graph_lab/PUZZLE_LIBRARY_PHASES.md
 galaxy_graph_lab/PUZZLE_GENERATION_README.md
+res/generate_result_graphs.py

@@ -1,0 +1,93 @@
+{
+  "center_type_by_center": {
+    "g0": "vertex",
+    "g1": "cell",
+    "g2": "edge",
+    "g3": "edge",
+    "g4": "edge",
+    "g5": "vertex",
+    "g6": "cell",
+    "g7": "vertex",
+    "g8": "vertex",
+    "g9": "cell"
+  },
+  "centers": [
+    {
+      "col_coord2": 1,
+      "id": "g0",
+      "row_coord2": 1
+    },
+    {
+      "col_coord2": 6,
+      "id": "g1",
+      "row_coord2": 2
+    },
+    {
+      "col_coord2": 13,
+      "id": "g2",
+      "row_coord2": 4
+    },
+    {
+      "col_coord2": 1,
+      "id": "g3",
+      "row_coord2": 6
+    },
+    {
+      "col_coord2": 6,
+      "id": "g4",
+      "row_coord2": 7
+    },
+    {
+      "col_coord2": 1,
+      "id": "g5",
+      "row_coord2": 11
+    },
+    {
+      "col_coord2": 6,
+      "id": "g6",
+      "row_coord2": 12
+    },
+    {
+      "col_coord2": 13,
+      "id": "g7",
+      "row_coord2": 13
+    },
+    {
+      "col_coord2": 1,
+      "id": "g8",
+      "row_coord2": 15
+    },
+    {
+      "col_coord2": 6,
+      "id": "g9",
+      "row_coord2": 16
+    }
+  ],
+  "difficulty_calibration": {
+    "average_domain_overlap": 0.3408201058201058,
+    "average_non_rectangular_irregularity": 0.08333333333333337,
+    "average_region_irregularity": 0.008333333333333337,
+    "board_size_score": 0.5,
+    "center_count_score": 0.8,
+    "center_type_score": 0.64,
+    "domain_overlap_score": 0.3408201058201058,
+    "irregularity_within_target": false,
+    "max_region_irregularity": 0.08333333333333337,
+    "measured_difficulty": "hard",
+    "measured_score": 0.5694711711716691,
+    "message": "Difficulty calibration mismatch: requested hard, measured hard, overlap=0.341, non_rectangular_regions=1, non_rectangular_irregularity=0.083.",
+    "non_rectangular_region_count": 1,
+    "overlap_within_target": true,
+    "profile_match": false,
+    "requested_difficulty": "hard",
+    "solver_effort_score": 0.10348155298653298
+  },
+  "generation_retry_count": 2,
+  "generation_seed": 1729961370,
+  "grid_size": {
+    "cols": 9,
+    "rows": 9
+  },
+  "instance_id": "hard_threshold_9x9",
+  "requested_difficulty": "hard"
+}
